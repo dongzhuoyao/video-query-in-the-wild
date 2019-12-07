@@ -154,7 +154,7 @@ def train(loader, model, optimizer, epoch, args):
             target.extend(meta[_]['labels'])
         target = torch.from_numpy(np.array(target))
         input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
-        output, metric_feat = model(input,meta)
+        output, metric_feat = model(input)
         ce_loss = ce_loss_criterion(output.cuda(), target.long().cuda())
         loss = ce_loss #+ triple_loss
 
@@ -211,12 +211,9 @@ def val(args, model, triple_eval=False):
     return score_dict
 
 
+
 def get_model(args):
-    """ Create base model, and wrap it with an optional wrapper, useful for extending models
-    """
-
     #model = generic_load(args.arch, args.pretrained, args.pretrained_weights, args)
-
     #model = case_getattr(import_module('models.bases.' + arch), arch).get(args)
     from resnet18_3d_f2f import ResNet3D,BasicBlock
     model = ResNet3D(BasicBlock, [2, 2, 2, 2], num_classes=args.nclass)  # 50
@@ -234,8 +231,10 @@ def get_model(args):
             logger.warn('setting Dropout p to {}'.format(args.dropout))
             module.p = args.dropout
 
-    #wrapper = case_getattr(import_module('models.wrappers.' + args.wrapper), args.wrapper)
-    #model = wrapper(model, args)
+    #from models.wrappers.default_wrapper import DefaultWrapper
+    #model = DefaultWrapper(model, args)
+    from model_utils import set_distributed_backend
+    model = set_distributed_backend(model, args)
 
     return model
 
@@ -249,10 +248,9 @@ def main():
 
     seed(args.manual_seed)
 
-    #model = get_model(args)
-    import models;args.arch="resnet18_3d_f2f";args.wrapper="default_wrapper";model = models.get.get_model(args)
-    from dataloader_baseline import get_my_dataset
-    train_loader = get_my_dataset(args)
+    model = get_model(args)
+    #import models;args.arch="resnet18_3d_f2f";args.wrapper="default_wrapper";model = models.get.get_model(args)
+    from dataloader_baseline import get_my_dataset;train_loader = get_my_dataset(args)
     #from datasets.get import get_dataset;args.dataset = "arv120_20_60_triplet_clsrank_fs";train_loader = get_dataset(args)
 
     if args.evaluate:
