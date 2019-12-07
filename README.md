@@ -8,7 +8,7 @@
 - Evaluation into dataloader?
 - Flexible evaluation
 - word embedding into sub_directory
-
+- visual bank implementation check
 
 ## Install
 
