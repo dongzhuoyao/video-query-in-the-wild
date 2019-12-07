@@ -1,5 +1,15 @@
 ## Video query by Activity video in the Wild
 
+
+## TODO
+
+- Flexible dataloader
+- Flexible novelty gain
+- Evaluation into dataloader?
+- Flexible evaluation
+- word embedding into sub_directory
+
+
 ## Install
 
 pip install git+https://github.com/Jopepato/multilabelMetrics.git
