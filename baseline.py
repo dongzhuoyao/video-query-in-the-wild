@@ -185,7 +185,7 @@ def train(loader, model, optimizer, epoch, args):
 def val(args, model, triple_eval=False):
     model.eval()
     def feat_func(input):
-        logits, metric_feat= model(input, {})  # [B,C]
+        logits, metric_feat= model(input)  # [B,C]
         # metric_feat = F.normalize(metric_feat, p=2, dim=1)
         return metric_feat.data.cpu().numpy()
 
@@ -213,8 +213,7 @@ def val(args, model, triple_eval=False):
 
 
 def get_model(args):
-    #model = generic_load(args.arch, args.pretrained, args.pretrained_weights, args)
-    #model = case_getattr(import_module('models.bases.' + arch), arch).get(args)
+
     from resnet18_3d_f2f import ResNet3D,BasicBlock
     model = ResNet3D(BasicBlock, [2, 2, 2, 2], num_classes=args.nclass)  # 50
     if args.pretrained:
@@ -222,15 +221,10 @@ def get_model(args):
         from torchvision.models.resnet import resnet18
         model2d = resnet18(pretrained=True)
         model.load_2d(model2d)
-
-    #if args.replace_last_layer:
-    #    logger.warn('replacing last layer')
-    #    model = replace_last_layer(model, args)
     for module in model.modules():
         if args.dropout != 0 and isinstance(module, torch.nn.modules.Dropout):
-            logger.warn('setting Dropout p to {}'.format(args.dropout))
+            logger.warning('setting Dropout p to {}'.format(args.dropout))
             module.p = args.dropout
-
     #from models.wrappers.default_wrapper import DefaultWrapper
     #model = DefaultWrapper(model, args)
     from model_utils import set_distributed_backend
