@@ -8,9 +8,6 @@ import torch.nn
 from pytorchgo.utils import logger
 
 def get_model(args):
-    """ Create base model, and wrap it with an optional wrapper, useful for extending models
-    """
-
     model = generic_load(args.arch, args.pretrained, args.pretrained_weights, args)
     if args.replace_last_layer:
         logger.warn('replacing last layer')

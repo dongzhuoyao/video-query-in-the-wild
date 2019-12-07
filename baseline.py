@@ -154,7 +154,7 @@ def train(loader, model, optimizer, epoch, args):
             target.extend(meta[_]['labels'])
         target = torch.from_numpy(np.array(target))
         input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
-        output, metric_feat = model(input)
+        output, metric_feat = model(input,meta)
         ce_loss = ce_loss_criterion(output.cuda(), target.long().cuda())
         loss = ce_loss #+ triple_loss
 
@@ -249,7 +249,11 @@ def main():
 
     seed(args.manual_seed)
 
-    model = get_model(args)
+    #model = get_model(args)
+    import models;args.arch="resnet18_3d_f2f";args.wrapper="default_wrapper";model = models.get.get_model(args)
+    from dataloader_baseline import get_my_dataset
+    train_loader = get_my_dataset(args)
+    #from datasets.get import get_dataset;args.dataset = "arv120_20_60_triplet_clsrank_fs";train_loader = get_dataset(args)
 
     if args.evaluate:
         logger.info(vars(args))
@@ -279,8 +283,6 @@ def main():
     model_summary(model)
     optimizer_summary(optimizer)
 
-    from dataloader_baseline import get_my_dataset
-    train_loader = get_my_dataset(args)
 
     logger.info(vars(args))
 
