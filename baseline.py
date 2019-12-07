@@ -1,4 +1,3 @@
-import torch.backends.cudnn as cudnn
 from models.get import get_model
 from datasets.get import get_dataset
 from misc_utils.utils import seed
@@ -7,14 +6,12 @@ import numpy as np
 from bdb import BdbQuit
 import traceback
 from sklearn import metrics as sklearn_metrics
-import sys, os
+import sys
 from pytorchgo.utils import logger
 from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary
 
 from pytorchgo.utils.pytorch_utils import set_gpu
-import torch.nn.functional as F
 
-# pytorch bugfixes
 import cv2
 
 cv2.setNumThreads(0)
@@ -39,11 +36,9 @@ novel_img_num = 5
 input_size = 112
 nclass = 200
 
-
-arch = 'resnet18_3d_f2f_memnlfixv3_reg_temp_word4l01t';temperature=0.1
+arch = 'resnet18_3d_f2f'
 cur_dataset = "arv120_20_60_triplet_clsrank_fs"
 from retrievel_evaluation1202060 import ARV_Retrieval_Clip,ARV_Retrieval_Untrimmed,ARV_Retrieval
-cur_criterion = 'crossentropy_criterion'
 
 init_lr = 1e-4
 eval_per = 15
@@ -67,7 +62,7 @@ metric_feat_dim = 512
 def parse():
     print('parsing arguments')
     parser = argparse.ArgumentParser(description='PyVideoResearch')
-
+    parser.add_argument('--va', action='store_true')
     parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true', help='evaluate on validation sets')
     # Data parameters
     parser.add_argument('--dataset', default=cur_dataset, help='name of dataset under datasets/')
@@ -78,7 +73,6 @@ def parse():
     parser.add_argument('--pretrained', dest='pretrained', action='store_true', help='use pre-trained model')
     parser.add_argument('--pretrained_weights', default='')
     parser.add_argument('--nclass', default=nclass, type=int)
-    parser.add_argument('--criterion', default=cur_criterion, help=' ''default_criterion'' for sigmoid loss')
     parser.add_argument('--features', default='fc', help='conv1;layer1;layer2;layer3;layer4;fc')
 
     # System parameters
@@ -125,13 +119,6 @@ def parse():
     parser.add_argument('--percent_per_gallery', default=None, type=float)
     parser.add_argument('--triple_eval', action='store_true')
 
-
-
-
-
-
-
-
     args = parser.parse_args()
 
     args.replace_last_layer = True
@@ -161,19 +148,16 @@ def part(x, iter_size):
     return itertools.islice(x, n)
 
 
-def train(loader, model, criterion, optimizer, epoch, args):
+def train(loader, model, optimizer, epoch, args):
     timer = Timer()
     data_time = AverageMeter()
     losses = AverageMeter()
     triple_losses = AverageMeter()
     ce_losses = AverageMeter()
-    reg_losses = AverageMeter()
-    semantic_losses = AverageMeter()
 
     # switch to train mode
     cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
     model.train()
-    criterion.train()
     optimizer.zero_grad()
     iter_size = 1.0
     import torch.nn as nn
@@ -185,28 +169,22 @@ def train(loader, model, criterion, optimizer, epoch, args):
 
         _batch_size = len(meta)
         target = []
-        semantic_mem = meta[0]['semantic_mem']
         for _ in range(_batch_size):
             target.extend(meta[_]['labels'])
         target = torch.from_numpy(np.array(target))
         target = target.long().cuda()
         input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
-        output, metric_feat, nled_logits, nled_rank_embed, reg_logits, word_logits = model([input,target,temperature,semantic_mem], meta)
-
+        output, metric_feat = model(input, meta)
         ce_loss = ce_loss_criterion(output, target)
         metric_feat = metric_feat.mean(dim=2) #reduce temporal dimension
         metric_feat = metric_feat.view(_batch_size, 3, metric_feat.shape[1])
         metric_feat = torch.nn.functional.normalize(metric_feat, dim=-1)
         #triple_loss = triple_loss_criterion(metric_feat[:, 0, :], metric_feat[:, 1, :], metric_feat[:, 2, :])
-        reg_loss = ce_loss_criterion(reg_logits, target)
-        semantic_loss = ce_loss_criterion(word_logits, target)
-        loss = ce_loss+ reg_loss + semantic_loss #+ triple_loss
+        loss = ce_loss #+ triple_loss
 
         loss.backward()
         losses.update(loss.item())
         ce_losses.update(ce_loss.item())
-        reg_losses.update(reg_loss.item())
-        semantic_losses.update(semantic_loss.item())
         #triple_losses.update(triple_loss.item())
         if i % args.accum_grad == args.accum_grad - 1:
             optimizer.step()
@@ -219,19 +197,14 @@ def train(loader, model, criterion, optimizer, epoch, args):
                         'Dataload_Time={data_time.avg:.3f}\t'
                         'Loss={loss.avg:.4f}\t'
                         'CELoss={ce_loss.avg:.4f}\t'
-                        'reg_loss={reg_loss.avg:.4f}\t'
-                        'semantic_loss={semantic_loss.avg:.4f}\t'
                         'LR={cur_lr:.7f}\t'
                         'bestAP={ap:.3f}'.format(
                 epoch, i, int(len(loader) * iter_size), len(loader), timer=timer,
-                data_time=data_time, loss=losses, ce_loss=ce_losses, reg_loss=reg_losses,semantic_loss=semantic_losses,
-                ap=args.best_score,
+                data_time=data_time, loss=losses, ce_loss=ce_losses,  ap=args.best_score,
                 cur_lr=cur_lr))
             losses.reset()
             ce_losses.reset()
-            reg_losses.reset()
-            semantic_losses.reset()
-        del loss, output  # make sure we don't hold on to the graph
+
 
 
 def val(args, model, triple_eval=False):
@@ -242,7 +215,7 @@ def val(args, model, triple_eval=False):
         # return np.linalg.norm(query-candidate)
 
     def feat_func(input):
-        output, metric_feat, nled_logits, nled_rank_embed, reg_logits= model([input,None,temperature, None], {})  # [B,C]
+        logits, metric_feat= model(input, {})  # [B,C]
         # metric_feat = F.normalize(metric_feat, p=2, dim=1)
         return metric_feat.data.cpu().numpy()
 
@@ -284,9 +257,6 @@ def main():
     # define loss function
     from importlib import import_module
     from models.utils import case_getattr
-    criterion = case_getattr(import_module('models.criteria.' + args.criterion), args.criterion)
-    criterion = criterion(args).cuda()
-
     if args.evaluate:
         logger.info(vars(args))
         if args.test_load is not None:
@@ -321,7 +291,7 @@ def main():
 
     for epoch in range(args.epochs):
 
-        train(train_loader, model, criterion, optimizer, epoch, args)
+        train(train_loader, model, optimizer, epoch, args)
 
         if (epoch % eval_per == 0 and epoch > 0) or epoch == args.epochs - 1:
             score_dict = val(args=args, model=model)

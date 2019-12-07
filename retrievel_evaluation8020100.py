@@ -12,7 +12,6 @@ import torch.utils.data as data
 from data_generate.activitynet_label import arv_train_label,arv_test_label,arv_val_label,activitynet_label_list
 from pytorchgo.utils import logger
 from sklearn import preprocessing as sklearn_preprocessing
-from datasets.arv import  json_path
 from sklearn.metrics import average_precision_score
 import getpass
 import faiss  # make faiss available
