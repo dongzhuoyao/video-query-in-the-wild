@@ -11,6 +11,9 @@
 - visual bank implementation check
 - Flexible dataloader for ranking baseline
 - "noisy"->"distractor"
+- Exhaustive search combination result in moment retrieval should be updated
+- should remove background noise for activity.
+
 
 ## Install
 
