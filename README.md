@@ -13,7 +13,7 @@
 - "noisy"->"distractor"
 - Exhaustive search combination result in moment retrieval should be updated
 - should remove background noise for activity.
-
+- NMS in Moment Retrieval
 
 ## Install
 

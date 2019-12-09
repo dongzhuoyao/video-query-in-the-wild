@@ -13,8 +13,8 @@ from scipy import stats
 fps = 3
 debug_iter = 30
 R_at_N_tiou_thres = 0.5
-noisy_label = "noisy_activity"
-retrieval_type_noise = "noise"
+NOISE_LABEL = "noisy_activity"
+RETRIEVAL_TYPE_NOISE = "noise"
 
 from data_generate.activitynet_label_100_20_80 import json_path, longvideo_json_path
 
@@ -57,7 +57,7 @@ def Average(lst):
 
 
 def generate_multi_query(query_list):
-    logger.warn("generate multi query")
+    logger.warning("generate multi query")
     random.seed(620)
     cls_dict = {}
     for q in query_list:
@@ -250,7 +250,7 @@ class class_map():
             logger.warning("avg2 R@{}={}".format(str(_thres), avg_recall))
             logger.warning("avg2 base R@{}={}".format(str(_thres), base_recall))
             logger.warning("avg2 novel R@{}={}".format(str(_thres), novel_recall))
-            logger.warn("-" * 30)
+            logger.warning("-" * 30)
 
         ################
         base_ap_list = [];
@@ -276,7 +276,7 @@ class class_map():
         avg1_class_specific_novel_map = Average(novel_ap_list)
         avg1_hmean = stats.hmean([avg1_class_specific_base_map + 1e-10, avg1_class_specific_novel_map + 1e-10])
 
-        logger.warn("*" * 30)
+        logger.warning("*" * 30)
         logger.warning("avg2 harmonic map={}".format(hmean))
         logger.warning("avg2 class_specific_base_map={}".format(class_specific_base_map))
         logger.warning("avg2 class_specific_novel_map={}".format(class_specific_novel_map))
@@ -327,7 +327,7 @@ class ARV_Retrieval_Clip():
         self.clip_sec = args.clip_sec
         if args.test_frame_num == None:
             self.test_frame_num = 128
-            logger.warn("test_frame_num is None, set default 128")
+            logger.warning("test_frame_num is None, set default 128")
         else:
             self.test_frame_num = args.test_frame_num
         self.args = args
@@ -335,20 +335,19 @@ class ARV_Retrieval_Clip():
         self.input_size = args.input_size
         self.possible_classes = list(set(arv_train_label) | set(arv_test_label))
         self.load_data()
-        logger.warn("memory_leak_debug={}".format(args.memory_leak_debug))
+        logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
         data_dict = json.load(open(longvideo_json_path))
-        query = data_dict['query']
         self.query_list = []
-        for q in query:
-            if q['retrieval_type'] == retrieval_type_noise:
+        for q in data_dict['query']:
+            if q['retrieval_type'] == RETRIEVAL_TYPE_NOISE:
                 continue
             self.query_list.append(q)
-
         self.gallery_list = data_dict['gallery']
-        logger.warn("query length={}, gallery size={}".format(len(self.query_list), len(self.gallery_list)))
+
+        logger.warning("query length={}, gallery size={}".format(len(self.query_list), len(self.gallery_list)))
 
     def extract_item_feature(self):
         import pickle
@@ -358,8 +357,7 @@ class ARV_Retrieval_Clip():
             object_file = pickle.load(file)
             self.query_list = object_file['query_list']
             self.gallery_list = object_file['gallery_list']
-            logger.warn("load cache_feat from {}".format(cache_path))
-
+            logger.warning("load cache_feat from {}".format(cache_path))
         else:
             cur_list = list()
             chunk_list = list(chunks(self.query_list, self.test_batch_size))
@@ -367,11 +365,13 @@ class ARV_Retrieval_Clip():
                                          desc="eval_clips, extracting query feat, batch size:{}x{}".format(
                                              self.test_batch_size, len(chunk_list))):
                 if self.args.debug and idxx > debug_iter: break
-                if not self.args.memory_leak_debug:  # dongzhuoyao
+
+                if self.args.memory_leak_debug:
+                    feat = np.random.rand(len(data_batch), self.feat_dim, self.test_frame_num).astype(np.float32)
+                else:
                     img = _pre_process(data_batch, self.input_size, self.test_frame_num)
                     feat = self.feat_extract_func(img)
-                else:
-                    feat = np.random.rand(len(data_batch), self.feat_dim, self.test_frame_num).astype(np.float32)
+
                 assert len(data_batch) == feat.shape[0]
                 for i in range(feat.shape[0]):  # iter on batch size,[B,C,T]
                     data_batch[i]['feat'] = sklearn_preprocessing.normalize(
@@ -458,13 +458,13 @@ class ARV_Retrieval_Clip():
             self.gallery_list = self.tmp_gallery
 
             with open(cache_path, 'wb') as fp:
-                logger.warn("dump cache_feat to {}".format(cache_path))
+                logger.warning("dump cache_feat to {}".format(cache_path))
                 pickle.dump(dict(query_list=self.query_list, gallery_list=self.gallery_list), fp)
 
-            logger.warn("average #segment={} per candidate video.".format(len(self.gallery_list) / proceeded_id))
+            logger.warning("average #segment={} per candidate video.".format(len(self.gallery_list) / proceeded_id))
 
         if not self.args.debug and not self.args.memory_leak_debug:
-            logger.warn("check class completeness.")
+            logger.warning("check class completeness.")
             complete_dict = dict.fromkeys(self.possible_classes, 0)
             for can in self.gallery_list:
                 if can['clip_label'] == 'unknown':
@@ -486,7 +486,7 @@ class ARV_Retrieval_Clip():
             self.faiss_xb = xb
 
     def ranking(self, ):
-        logger.warn(
+        logger.warning(
             "start ranking, query size={}, gallery clips size={}".format(len(self.query_list), len(self.gallery_list)))
 
         self.class_map_evaluation = class_map(self.query_list)
@@ -500,7 +500,7 @@ class ARV_Retrieval_Clip():
             query = queries[0]
             ignore_videoid_list = [q['video_id'] for q in queries]
 
-            assert query['retrieval_type'] != retrieval_type_noise
+            assert query['retrieval_type'] != RETRIEVAL_TYPE_NOISE
             gt_label = query['label']
             single_query_hit = list()
             for idx, candidate in enumerate(self.gallery_list):
@@ -560,7 +560,7 @@ class ARV_Retrieval_Moment():
         self.test_batch_size = args.test_batch_size
         if args.test_frame_num == None:
             self.test_frame_num = 128
-            logger.warn("test_frame_num is None, set default 128")
+            logger.warning("test_frame_num is None, set default 128")
         else:
             self.test_frame_num = args.test_frame_num
         self.input_size = args.input_size
@@ -568,7 +568,7 @@ class ARV_Retrieval_Moment():
         self.feat_dim = args.metric_feat_dim
         self.use_faiss = True
         self.load_data()
-        logger.warn("memory_leak_debug={}".format(args.memory_leak_debug))
+        logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
@@ -576,11 +576,11 @@ class ARV_Retrieval_Moment():
         query = data_dict['query']
         self.query_list = []
         for q in query:
-            if q['retrieval_type'] != retrieval_type_noise:
+            if q['retrieval_type'] != RETRIEVAL_TYPE_NOISE:
                 self.query_list.append(q)
 
         self.gallery_list = data_dict['gallery']
-        logger.warn("query length={}, gallery size={}".format(len(self.query_list), len(self.gallery_list)))
+        logger.warning("query length={}, gallery size={}".format(len(self.query_list), len(self.gallery_list)))
 
     def extract_item_feature(self):
         import pickle
@@ -590,8 +590,9 @@ class ARV_Retrieval_Moment():
             object_file = pickle.load(file)
             self.query_list = object_file['query_list']
             self.gallery_list = object_file['gallery_list']
-            logger.warn("load cache_feat from {}".format(cache_path))
+            logger.warning("load cache_feat from {}".format(cache_path))
         else:
+            ### extract feature for query video #####
             cur_list = list()
             chunk_list = list(chunks(self.query_list, self.test_batch_size))
             for idxx, data_batch in tqdm(enumerate(chunk_list), total=len(chunk_list),
@@ -599,11 +600,11 @@ class ARV_Retrieval_Moment():
                                              self.test_batch_size,
                                              len(chunk_list))):
                 if self.args.debug and idxx > debug_iter: break
-                if not self.args.memory_leak_debug:
+                if  self.args.memory_leak_debug:
+                    feat = np.random.rand(len(data_batch), self.feat_dim, self.test_frame_num).astype(np.float32)
+                else:
                     img = _pre_process(data_batch, self.input_size, self.test_frame_num)
                     feat = self.feat_extract_func(img)
-                else:
-                    feat = np.random.rand(len(data_batch), self.feat_dim, self.test_frame_num).astype(np.float32)
                 assert len(data_batch) == feat.shape[0]
                 for i in range(feat.shape[0]):  # robust indexing
                     data_batch[i]['feat'] = sklearn_preprocessing.normalize(
@@ -612,26 +613,25 @@ class ARV_Retrieval_Moment():
                 cur_list.extend(data_batch)
             self.query_list = cur_list
 
+            ### extract feature for gallery video #####
             for proceeded_id, _g in tqdm(enumerate(self.gallery_list), total=len(self.gallery_list),
-                                         desc="eval_untrimmed, extracting gallery feat"):
+                                         desc="eval_moment, extracting gallery feat"):
                 if self.args.debug and proceeded_id > debug_iter * 10: break
-
                 start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(_g)
                 chunk_list = list(chunks(list(range(activitynet_frame_num)), self.test_frame_num))
                 feats_list = []
                 for idxx, data_batch in enumerate(chunk_list):
-                    if not self.args.memory_leak_debug:
+                    if  self.args.memory_leak_debug:
+                        _feats = np.random.rand(1, self.feat_dim, self.test_frame_num).astype(np.float32)
+                    else:
                         images = read_video(frame_path=frame_path, start_frame_idx=data_batch[0],
                                             gt_frame_num=len(data_batch), train_frame_num=self.test_frame_num,
                                             video_transform=transforms.Compose([
                                                 videotransforms.CenterCrop(self.input_size),
-                                                # videotransforms.RandomHorizontalFlip()
                                             ]),
                                             activitynet_frame_num=activitynet_frame_num)
                         images = torch.from_numpy(images).float().unsqueeze(0)
                         _feats = self.feat_extract_func(images)
-                    else:
-                        _feats = np.random.rand(1, self.feat_dim, self.test_frame_num).astype(np.float32)
 
                     _feats = _feats[:, :, :len(data_batch)]  # truncate when meeting last clip of the long video
                     _feats = np.transpose(_feats[0], (1, 0))  # >C,T=>T,C
@@ -646,10 +646,8 @@ class ARV_Retrieval_Moment():
                 annotations = _g['annotations']
 
                 def cal_iou(min1, max1, min2, max2):
-                    # assert s1<=e2 and s2<=e1
                     overlap = max(0, min(max1, max2) - max(min1, min2))
                     return overlap * 1.0 / (max(max2, max1) - min(min1, min2))
-
                 def cal_hit(loc_sec):
                     best_iou = -1
                     best_result = None
@@ -700,14 +698,14 @@ class ARV_Retrieval_Moment():
                 moment_total.append(len(moments))
                 self.tmp_gallery.extend(moments)
             self.gallery_list = self.tmp_gallery
-            logger.warn("#moment/video = {}".format(sum(moment_total) / len(moment_total)))
-            logger.warn("average #segment={} per candidate video.".format(len(self.gallery_list) / proceeded_id))
+            logger.warning("#moment/video = {}".format(sum(moment_total) / len(moment_total)))
+            logger.warning("average #segment={} per candidate video.".format(len(self.gallery_list) / proceeded_id))
 
             with open(cache_path, 'wb') as fp:
-                logger.warn("dump cache_feat to {}".format(cache_path))
+                logger.warning("dump cache_feat to {}".format(cache_path))
                 pickle.dump(dict(query_list=self.query_list, gallery_list=self.gallery_list), fp)
 
-        logger.warn("check class completeness.")
+        logger.warning("check class completeness.")
         complete_dict = dict.fromkeys(self.possible_classes, 0)
         for can in self.gallery_list:
             if len(can['hit_list']) == 0:
@@ -732,7 +730,7 @@ class ARV_Retrieval_Moment():
             self.faiss_xb = xb
 
     def ranking(self, ):
-        logger.warn("start ranking, query size={}, gallery potential moments size={}".format(len(self.query_list),
+        logger.warning("start ranking, query size={}, gallery potential moments size={}".format(len(self.query_list),
                                                                                              len(self.gallery_list)))
 
         self.class_map_evaluation05 = class_map(self.query_list)
@@ -745,9 +743,9 @@ class ARV_Retrieval_Moment():
 
         from multiprocessing import Process, Queue, JoinableQueue, cpu_count, Lock
         if self.args.topk_per_video is not None:
-            logger.warn("will doing filter top-{} per candidate video".format(self.args.topk_per_video))
+            logger.warning("will doing filter top-{} per candidate video".format(self.args.topk_per_video))
         if self.args.percent_per_gallery is not None:
-            logger.warn("will doing filter percent-{} per gallery".format(self.args.percent_per_gallery))
+            logger.warning("will doing filter percent-{} per gallery".format(self.args.percent_per_gallery))
 
         def work(id, jobs, result, _lock,
                  _lock07):  # https://gist.github.com/brantfaircloth/1255715/5ce00c58ae8775c7d75a7bc08ab75d5c7f665bca
@@ -758,7 +756,7 @@ class ARV_Retrieval_Moment():
                 query = queries[0]
                 ignore_videoid_list = [q['video_id'] for q in queries]
                 # ignore_videoid_list = query['video_id']
-                assert query['retrieval_type'] != retrieval_type_noise
+                assert query['retrieval_type'] != RETRIEVAL_TYPE_NOISE
                 gt_label = query['label']
                 single_query_hit = list()
                 for idx, candidate in enumerate(self.gallery_list):
@@ -843,7 +841,7 @@ class ARV_Retrieval_Moment():
         jobs = Queue()
         result = JoinableQueue()
         NUMBER_OF_PROCESSES = cpu_count() * 1 // 4
-        logger.warn("multi processing evaluation: #Process={}".format(NUMBER_OF_PROCESSES))
+        logger.warning("multi processing evaluation: #Process={}".format(NUMBER_OF_PROCESSES))
         for w in self.query_list:
             jobs.put(w)
 
@@ -899,14 +897,14 @@ class ARV_Retrieval():
         self.input_size = args.input_size
         if args.test_frame_num == None:
             self.test_frame_num = 128
-            logger.warn("test_frame_num is None, set default 128")
+            logger.warning("test_frame_num is None, set default 128")
         else:
             self.test_frame_num = args.test_frame_num
         self.feat_dim = args.metric_feat_dim
         self.use_faiss = args.use_faiss
         self.load_data()
         logger.info("loading {} data: {}".format(self.split, len(self.data_list[self.split])))
-        logger.warn("memory_leak_debug={}".format(args.memory_leak_debug))
+        logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
@@ -915,7 +913,7 @@ class ARV_Retrieval():
             self.data_dict = json.load(open(json_path))
             self.data_list = dict(training=list(), testing=list(), validation=list())
             for k, v in self.data_dict[self.split].items():
-                if k == noisy_label:
+                if k == NOISE_LABEL:
                     self.data_list[self.split].extend(v[:600])  # experience value
                 else:
                     self.data_list[self.split].extend(v[:10])  # for novel class, the real video number is less than 10.
@@ -934,7 +932,7 @@ class ARV_Retrieval():
             object_file = pickle.load(file)
             self.query_list = object_file['query_list']
             self.gallery_list = object_file['gallery_list']
-            logger.warn("load cache_feat from {}".format(cache_path))
+            logger.warning("load cache_feat from {}".format(cache_path))
 
         else:
             cur_list = list()
@@ -956,13 +954,13 @@ class ARV_Retrieval():
 
             self.query_list = []
             for q in cur_list:
-                if q['retrieval_type'] != retrieval_type_noise:
+                if q['retrieval_type'] != RETRIEVAL_TYPE_NOISE:
                     self.query_list.append(q)
 
             self.gallery_list = cur_list
 
             with open(cache_path, 'wb') as fp:
-                logger.warn("dump cache_feat to {}".format(cache_path))
+                logger.warning("dump cache_feat to {}".format(cache_path))
                 pickle.dump(dict(query_list=self.query_list, gallery_list=self.gallery_list), fp)
 
         if self.use_faiss:
@@ -979,7 +977,7 @@ class ARV_Retrieval():
             self.faiss_xb = xb
 
     def ranking(self, ):
-        logger.warn(
+        logger.warning(
             "start ranking, query size={}, gallery size={}".format(len(self.query_list), len(self.gallery_list)))
 
         self.class_map_evaluation = class_map(self.query_list)
@@ -991,7 +989,7 @@ class ARV_Retrieval():
             query = queries[0]
             ignore_videoid_list = [q['video_id'] for q in queries]
             # ignore_videoid_list = query['video_id']
-            assert query['retrieval_type'] != retrieval_type_noise
+            assert query['retrieval_type'] != RETRIEVAL_TYPE_NOISE
             gt_label = query['label']
             single_query_hit = list()
 
