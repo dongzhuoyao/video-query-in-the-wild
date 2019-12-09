@@ -97,8 +97,6 @@ def parse():
     parser.add_argument('--metric_feat_dim', default=metric_feat_dim, type=int)
     parser.add_argument('--read_cache_feat', default=False, action='store_true')
     parser.add_argument('--memory_leak_debug', default=False, action='store_true')
-    parser.add_argument('--topk_per_video', default=None, type=int)
-    parser.add_argument('--percent_per_gallery', default=None, type=float)
     parser.add_argument('--triple_eval', action='store_true')
 
     args = parser.parse_args()

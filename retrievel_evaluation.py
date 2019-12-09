@@ -132,13 +132,10 @@ class class_map():
             else:
                 raise
 
-    def mp_add2dict(self, single_query_hit):
+    def multiprocess_calculate(self, single_query_hit):
         single_query_hit = [d for d in single_query_hit if not d['ignore']]
-        y_true = np.array([d['tp'] for d in single_query_hit])
-        y_true[-1] = 1  # for robust mAP
+        y_true = np.array([d['tp'] for d in single_query_hit]);y_true[-1] = 1  # for robust mAP
         y_scores = np.array([d['score'] for d in single_query_hit])
-        # y_true = np.array([d['tp'] for d in single_query_hit])
-        # y_scores = np.array([d['score'] for d in single_query_hit])
         ap = average_precision_score(y_true, y_scores)
         #######
         recall_list = []
@@ -148,16 +145,17 @@ class class_map():
             recall_list.append(cur_recall)
         return dict(ap=ap, recall_list=recall_list)
 
-    def mp_add2dict_update(self, cls_name, retrieval_type, r_dict):
+    def multiprocess_update(self, cls_name, retrieval_type, r_dict):
         ap = r_dict['ap']
         recall_list = r_dict['recall_list']
 
+        #####update ap
         self.class_agnostic_ap.append(ap)
         if cls_name in self.class_dict.keys():
             self.class_dict[cls_name].append(ap)
         else:
             self.class_dict[cls_name] = [ap]
-        #######
+        #######update recall list
         for _, _thres in enumerate(self.r_at_n):
             self.full_retrieval_top[str(_thres)].append(recall_list[_])
 
@@ -174,11 +172,8 @@ class class_map():
 
     def add2dict(self, cls_name, retrieval_type, single_query_hit):
         single_query_hit = [d for d in single_query_hit if not d['ignore']]
-        y_true = np.array([d['tp'] for d in single_query_hit])
-        y_true[-1] = 1  # for robust mAP
+        y_true = np.array([d['tp'] for d in single_query_hit]);y_true[-1] = 1  # for robust mAP
         y_scores = np.array([d['score'] for d in single_query_hit])
-        # y_true = np.array([d['tp'] for d in single_query_hit])
-        # y_scores = np.array([d['score'] for d in single_query_hit])
         # confusion matrix
         if 'gt_label' in single_query_hit[0]:
             self.cm_gt_labels.extend([i['gt_label'] for i in single_query_hit[:100]])
@@ -382,7 +377,6 @@ class ARV_Retrieval_Clip():
             for proceeded_id, _g in tqdm(enumerate(self.gallery_list), total=len(self.gallery_list),
                                          desc="eval_clips, extracting gallery feat"):
                 if self.args.debug and proceeded_id > debug_iter * 10: break
-                # if proceeded_id > 30:break#dongzhuoyao
                 start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(_g)
                 chunk_list = list(chunks(list(range(activitynet_frame_num)), self.test_frame_num))
                 feats_list = []
@@ -392,7 +386,6 @@ class ARV_Retrieval_Clip():
                                             gt_frame_num=len(data_batch), train_frame_num=self.test_frame_num,
                                             video_transform=transforms.Compose([
                                                 videotransforms.CenterCrop(self.input_size),
-                                                # videotransforms.RandomHorizontalFlip()
                                             ]),
                                             activitynet_frame_num=activitynet_frame_num)
                         images = torch.from_numpy(images).float().unsqueeze(0)
@@ -503,9 +496,7 @@ class ARV_Retrieval_Clip():
             single_query_hit = list()
             for idx, candidate in enumerate(self.gallery_list):
                 scored_dict = {}
-                # scored_dict['label'] = candidate['label']
                 scored_dict['gt_label'] = gt_label
-                # scored_dict['query_duration_sec'] = query['segment'][1] - query['segment'][0]
 
                 if candidate['clip_label'] == gt_label:  # mainly evaluate R@N at tIoU=0.5
                     scored_dict['tp'] = 1
@@ -728,44 +719,32 @@ class ARV_Retrieval_Moment():
                                                                                              len(self.gallery_list)))
 
         self.class_map_evaluation05 = class_map(self.query_list)
-        self.class_map_evaluation07 = class_map(self.query_list)
-
         if self.args.debug:
             self.query_list = [[i] for i in self.query_list]
         else:
             self.query_list = generate_multi_query(self.query_list)
 
-        from multiprocessing import Process, Queue, JoinableQueue, cpu_count, Lock
-        if self.args.topk_per_video is not None:
-            logger.warning("will doing filter top-{} per candidate video".format(self.args.topk_per_video))
-        if self.args.percent_per_gallery is not None:
-            logger.warning("will doing filter percent-{} per gallery".format(self.args.percent_per_gallery))
-
-        def work(id, jobs, result, _lock,
-                 _lock07):  # https://gist.github.com/brantfaircloth/1255715/5ce00c58ae8775c7d75a7bc08ab75d5c7f665bca
+        from multiprocessing import Process, Queue, JoinableQueue, cpu_count
+        def work(id, jobs, result):  # https://gist.github.com/brantfaircloth/1255715/5ce00c58ae8775c7d75a7bc08ab75d5c7f665bca
             while True:
                 queries = jobs.get()
                 if queries is None:
                     break
                 query = queries[0]
-                ignore_videoid_list = [q['video_id'] for q in queries]
-                # ignore_videoid_list = query['video_id']
+                ignore_videoid_list = [q['video_id'] for q in queries]#ignore those long videos, which current short query video comes from..
                 assert query['retrieval_type'] != RETRIEVAL_TYPE_NOISE
                 gt_label = query['label']
                 single_query_hit = list()
                 for idx, candidate in enumerate(self.gallery_list):
                     hit_list = candidate['hit_list']
                     scored_dict = {}
-                    # scored_dict['label'] = candidate['label']
                     scored_dict['gt_label'] = gt_label
-                    # scored_dict['query_duration_sec'] = query['segment'][1] - query['segment'][0]
 
                     iou = 0
                     assert len(hit_list) <= 1
                     if len(hit_list) == 1 and hit_list[0]['label'] == gt_label:
                         iou = hit_list[0]['iou']
                     scored_dict['iou'] = iou
-                    scored_dict['can_id'] = idx
 
                     if candidate['video_id'] in ignore_videoid_list:
                         scored_dict['ignore'] = True
@@ -774,63 +753,31 @@ class ARV_Retrieval_Moment():
 
                     single_query_hit.append(scored_dict)
 
-                if "query_num" in self.args:
-                    query_feat = 0
-                    for _iiii in range(self.args.query_num):
-                        query_feat += queries[_iiii]['feat']
-                    query_feat /= self.args.query_num
-                else:
-                    query_feat = query['feat']
+                query_feat = 0
+                for _iiii in range(self.args.query_num):
+                    query_feat += queries[_iiii]['feat']
+                query_feat /= self.args.query_num
+
                 D, I = self.faiss_index.search(query_feat, k=self.faiss_xb.shape[0])
-                # D, I = self.faiss_index.search(query['feat'], 1000)
                 D = np.squeeze(D)
                 I = np.squeeze(I)
                 tmp_single_query_hit = []
-
-                counter = dict.fromkeys(list(range(len(self.gallery_list))), 0)
                 for j in range(I.shape[0]):
                     _j_th = I[j]
                     single_query_hit[_j_th]['score'] = -D[j]
-                    if self.args.topk_per_video is not None:
-                        if counter[single_query_hit[_j_th]['can_id']] <= self.args.topk_per_video:
-                            tmp_single_query_hit.append(single_query_hit[_j_th])  # ranking
-                    else:
-                        tmp_single_query_hit.append(single_query_hit[_j_th])  # ranking
-
-                    counter[single_query_hit[_j_th]['can_id']] += 1
+                    tmp_single_query_hit.append(single_query_hit[_j_th])  # ranking
                 single_query_hit = tmp_single_query_hit
-
-                if self.args.percent_per_gallery is not None:
-                    single_query_hit = single_query_hit[:int(self.args.percent_per_gallery * len(single_query_hit))]
-                else:
-                    single_query_hit = single_query_hit
 
                 for s in single_query_hit:
                     if s['iou'] >= 0.5:
                         s['tp'] = 1
                     else:
                         s['tp'] = 0
-                # _lock.acquire()
-                d05 = self.class_map_evaluation05.mp_add2dict(
+                #dongzhuoyao,TODO, can do NMS after thresholding.
+                d05 = self.class_map_evaluation05.multiprocess_calculate(
                     single_query_hit=single_query_hit)
-
-                #############################################
-                # logger.info("start tIoU 0.7 evaluataion")
-                # eval 0.7
-                for s in single_query_hit:
-                    if s['iou'] >= 0.3:
-                        s['tp'] = 1
-                    else:
-                        s['tp'] = 0
-
-                # _lock07.acquire()
-                d07 = self.class_map_evaluation07.mp_add2dict(
-                    single_query_hit=single_query_hit)
-                # _lock07.release()
-                # _lock.release()
                 result.put(dict(cls_name=gt_label, retrieval_type=query['retrieval_type'],
-                                dict05=d05,
-                                dict07=d07))
+                                dict05=d05))
 
         jobs = Queue()
         result = JoinableQueue()
@@ -838,24 +785,15 @@ class ARV_Retrieval_Moment():
         logger.warning("multi processing evaluation: #Process={}".format(NUMBER_OF_PROCESSES))
         for w in self.query_list:
             jobs.put(w)
+        [Process(target=work, args=(i, jobs, result)).start() for i in range(NUMBER_OF_PROCESSES)]#start up!
 
-        lock = Lock()
-        lock07 = Lock()
-
-        [Process(target=work, args=(i, jobs, result, lock, lock07)).start() for i in range(NUMBER_OF_PROCESSES)]
-
+        #get multi-processing result, and send to evaluation
         for _ in tqdm(range(len(self.query_list)), desc="multi-process ranking,#cpu={}".format(NUMBER_OF_PROCESSES),
-                      total=len(self.query_list)):
-            # if _ > 50:break
+                      total=len(self.query_list)):#fetch data for len(self.query_list) times
             r = result.get()
-            # print(result.qsize())
-            if True:
-                self.class_map_evaluation05.mp_add2dict_update(cls_name=r['cls_name'],
-                                                               retrieval_type=r['retrieval_type'],
-                                                               r_dict=r['dict05'])
-                self.class_map_evaluation07.mp_add2dict_update(cls_name=r['cls_name'],
-                                                               retrieval_type=r['retrieval_type'],
-                                                               r_dict=r['dict07'])
+            self.class_map_evaluation05.multiprocess_update(cls_name=r['cls_name'],
+                                                            retrieval_type=r['retrieval_type'],
+                                                            r_dict=r['dict05'])
             result.task_done()
 
         for w in range(NUMBER_OF_PROCESSES):
@@ -867,9 +805,7 @@ class ARV_Retrieval_Moment():
 
         logger.info("mAP05 result:")
         map05 = self.class_map_evaluation05.get_result()
-        logger.info("mAP03 result:")
-        map07 = self.class_map_evaluation07.get_result()
-        score_dict = dict(map05=map05, map07=map07)
+        score_dict = dict(map05=map05)
         return score_dict
 
     def evaluation(self):
@@ -963,7 +899,6 @@ class ARV_Retrieval():
         xb = np.concatenate(xb, axis=0)
         index.add(xb)  # add vectors to the index
         logger.info("faiss index.ntotal: {}".format(index.ntotal))
-
         self.faiss_index = index
         self.faiss_xb = xb
 
@@ -979,7 +914,6 @@ class ARV_Retrieval():
                                desc="{}: ranking".format(self.split)):
             query = queries[0]
             ignore_videoid_list = [q['video_id'] for q in queries]
-            # ignore_videoid_list = query['video_id']
             assert query['retrieval_type'] != RETRIEVAL_TYPE_NOISE
             gt_label = query['label']
             single_query_hit = list()
@@ -1002,6 +936,7 @@ class ARV_Retrieval():
                     scored_dict['tp'] = 1
                 else:
                     scored_dict['tp'] = 0
+
                 if "subclass_eval" in self.args and self.args.subclass_eval == "ggfather":  # evaluation based on class
                     from hierachy_class_util import is_same_father, is_same_grandfather, is_same_grandgrandfather
                     if is_same_grandgrandfather(candidate['label'], gt_label):
@@ -1018,13 +953,11 @@ class ARV_Retrieval():
 
                 single_query_hit.append(scored_dict)
 
-            if "query_num" in self.args:
-                query_feat = 0
-                for _iiii in range(self.args.query_num):
-                    query_feat += queries[_iiii]['feat']
-                query_feat /= self.args.query_num
-            else:
-                query_feat = query['feat']
+
+            query_feat = 0
+            for _iiii in range(self.args.query_num):
+                query_feat += queries[_iiii]['feat']
+            query_feat /= self.args.query_num
             D, I = self.faiss_index.search(query_feat, k=self.faiss_xb.shape[0])
             D = np.squeeze(D)
             I = np.squeeze(I)
@@ -1038,9 +971,7 @@ class ARV_Retrieval():
 
             self.class_map_evaluation.add2dict(cls_name=gt_label, retrieval_type=query['retrieval_type'],
                                                single_query_hit=single_query_hit)
-
-        _ = self.class_map_evaluation.get_result(self.original_query_list)
-        return _
+        return self.class_map_evaluation.get_result(self.original_query_list)
 
     def evaluation(self):
         self.extract_item_feature()
@@ -1051,12 +982,6 @@ class ARV_Retrieval():
 if __name__ == '__main__':
     def demo_feat_extract(input):
         return 1
-
-
-    def demo_metric_cal(x, y):
-        return 1
-
-
-    arv_retrieval = ARV_Retrieval(feat_extract_func=demo_feat_extract, metric_func=demo_metric_cal)
+    arv_retrieval = ARV_Retrieval(feat_extract_func=demo_feat_extract)
     d = arv_retrieval.evaluation()
     print(d)
