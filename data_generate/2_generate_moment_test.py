@@ -18,8 +18,8 @@ for video_id, annotations in activitynet_data['database'].items():
     duration = annotations['duration']
     gallery_list.append(dict(
         video_id=video_id,
-        segment=[0, duration],
-        border=[0, duration],
+        segment=[0, duration],#used for reading whole long video
+        border=[0, duration],#not used
         activitynet_duration=duration,
         activitynet_subset=activitynet_subset,
         annotations=annotations['annotations'],

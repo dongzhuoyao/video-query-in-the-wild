@@ -95,7 +95,6 @@ def parse():
     parser.add_argument('--temporal_stride', default=temporal_stride, type=int)
     parser.add_argument('--clip_sec', default=clip_sec, type=int)
     parser.add_argument('--metric_feat_dim', default=metric_feat_dim, type=int)
-    parser.add_argument('--use_faiss', default=True, action='store_true')
     parser.add_argument('--read_cache_feat', default=False, action='store_true')
     parser.add_argument('--memory_leak_debug', default=False, action='store_true')
     parser.add_argument('--topk_per_video', default=None, type=int)

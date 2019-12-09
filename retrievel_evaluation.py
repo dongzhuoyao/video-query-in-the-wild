@@ -323,7 +323,6 @@ class ARV_Retrieval_Clip():
         self.temporal_stride = args.temporal_stride
         self.feat_extract_func = feat_extract_func
         self.feat_dim = args.metric_feat_dim
-        self.use_faiss = args.use_faiss
         self.clip_sec = args.clip_sec
         if args.test_frame_num == None:
             self.test_frame_num = 128
@@ -473,17 +472,16 @@ class ARV_Retrieval_Clip():
             for key, value in complete_dict.items():
                 assert value > 0, "{} doesn't exist in gallery!".format(key)
 
-        if self.use_faiss:
-            index = faiss.IndexFlatL2(self.feat_dim)  # build the index
-            xb = []
-            for _g in self.gallery_list:
-                xb.append(_g['feat'].reshape(1, -1))
-            xb = np.concatenate(xb, axis=0)
-            index.add(xb)  # add vectors to the index
-            logger.info("faiss index.ntotal: {}".format(index.ntotal))
+        index = faiss.IndexFlatL2(self.feat_dim)  # build the index
+        xb = []
+        for _g in self.gallery_list:
+            xb.append(_g['feat'].reshape(1, -1))
+        xb = np.concatenate(xb, axis=0)
+        index.add(xb)  # add vectors to the index
+        logger.info("faiss index.ntotal: {}".format(index.ntotal))
 
-            self.faiss_index = index
-            self.faiss_xb = xb
+        self.faiss_index = index
+        self.faiss_xb = xb
 
     def ranking(self, ):
         logger.warning(
@@ -566,7 +564,6 @@ class ARV_Retrieval_Moment():
         self.input_size = args.input_size
         self.possible_classes = list(set(arv_train_label) | set(arv_test_label))
         self.feat_dim = args.metric_feat_dim
-        self.use_faiss = True
         self.load_data()
         logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
         logger.warning("query_num: {}".format(self.args.query_num))
@@ -716,18 +713,15 @@ class ARV_Retrieval_Moment():
             for key, value in complete_dict.items():
                 assert value > 0, "{} doesn't exist in gallery!".format(key)
 
-        if self.use_faiss:
-            # res = faiss.StandardGpuResources()
-            index = faiss.IndexFlatL2(self.feat_dim)  # build the index
-            # index = faiss.index_cpu_to_gpu(res, 0, index)
-            xb = []
-            for _g in self.gallery_list:
-                xb.append(_g['feat'].reshape(1, -1))
-            xb = np.concatenate(xb, axis=0)
-            index.add(xb)  # add vectors to the index
-            logger.info("faiss index.ntotal: {}".format(index.ntotal))
-            self.faiss_index = index
-            self.faiss_xb = xb
+        index = faiss.IndexFlatL2(self.feat_dim)  # build the index
+        xb = []
+        for _g in self.gallery_list:
+            xb.append(_g['feat'].reshape(1, -1))
+        xb = np.concatenate(xb, axis=0)
+        index.add(xb)  # add vectors to the index
+        logger.info("faiss index.ntotal: {}".format(index.ntotal))
+        self.faiss_index = index
+        self.faiss_xb = xb
 
     def ranking(self, ):
         logger.warning("start ranking, query size={}, gallery potential moments size={}".format(len(self.query_list),
@@ -901,7 +895,6 @@ class ARV_Retrieval():
         else:
             self.test_frame_num = args.test_frame_num
         self.feat_dim = args.metric_feat_dim
-        self.use_faiss = args.use_faiss
         self.load_data()
         logger.info("loading {} data: {}".format(self.split, len(self.data_list[self.split])))
         logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
@@ -963,18 +956,16 @@ class ARV_Retrieval():
                 logger.warning("dump cache_feat to {}".format(cache_path))
                 pickle.dump(dict(query_list=self.query_list, gallery_list=self.gallery_list), fp)
 
-        if self.use_faiss:
-            # res = faiss.StandardGpuResources()
-            index = faiss.IndexFlatL2(self.feat_dim)  # build the index
-            xb = []
-            for _g in self.gallery_list:
-                xb.append(_g['feat'].reshape(1, -1))
-            xb = np.concatenate(xb, axis=0)
-            index.add(xb)  # add vectors to the index
-            logger.info("faiss index.ntotal: {}".format(index.ntotal))
+        index = faiss.IndexFlatL2(self.feat_dim)  # build the index
+        xb = []
+        for _g in self.gallery_list:
+            xb.append(_g['feat'].reshape(1, -1))
+        xb = np.concatenate(xb, axis=0)
+        index.add(xb)  # add vectors to the index
+        logger.info("faiss index.ntotal: {}".format(index.ntotal))
 
-            self.faiss_index = index
-            self.faiss_xb = xb
+        self.faiss_index = index
+        self.faiss_xb = xb
 
     def ranking(self, ):
         logger.warning(
