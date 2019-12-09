@@ -6,7 +6,7 @@ from bdb import BdbQuit
 import traceback
 import sys
 from pytorchgo.utils import logger
-from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary,set_gpu
+from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary, set_gpu
 import cv2
 
 cv2.setNumThreads(0)
@@ -15,7 +15,6 @@ import resource
 
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
-
 
 logger.auto_set_dir()
 
@@ -31,23 +30,24 @@ novel_img_num = 5
 input_size = 112
 nclass = 200
 
-from retrievel_evaluation1202060 import ARV_Retrieval_Clip,ARV_Retrieval_Untrimmed,ARV_Retrieval
+from retrievel_evaluation import ARV_Retrieval, ARV_Retrieval_Clip, ARV_Retrieval_Moment
 
 init_lr = 1e-4
 eval_per = 15
 lr_decay_rate = '90'
 epochs = 150
 batch_size = 12
-test_batch_size = 12*3
+test_batch_size = 12 * 3
 triplet_margin = 1
 pretrained = True
 eval_split = 'testing'
-train_frame=32
+train_frame = 32
 no_novel = False
 dropout = 0.5
 temporal_stride = 1
 clip_sec = 6
 metric_feat_dim = 512
+
 
 def parse():
     print('parsing arguments')
@@ -66,6 +66,7 @@ def parse():
     parser.add_argument('-j', '--workers', default=8, type=int, help='number of data loading workers (default: 4)')
     parser.add_argument('--print_freq', '-p', default=50, type=int, help='print frequency (default: 10)')
     parser.add_argument('--manual_seed', default=0, type=int)
+    parser.add_argument('--query_num', default=1, type=int)
 
     # Training parameters
     parser.add_argument('--optimizer', default='adam', type=str, help='sgd | adam')
@@ -81,7 +82,8 @@ def parse():
     parser.add_argument('--replace_last_layer', dest='freeze_batchnorm', default=True, action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--gpu', default='0')
-    parser.add_argument('--test_load', type=str)#"'train_log/v2.arv.resnet18_3d_f2f.evaltest.nonovel.clsrank.bs12/best.pth.tar'
+    parser.add_argument('--test_load',
+                        type=str)  # "'train_log/v2.arv.resnet18_3d_f2f.evaltest.nonovel.clsrank.bs12/best.pth.tar'
     parser.add_argument('--novel_img_num', default=novel_img_num, type=int)
     parser.add_argument('--triplet_margin', default=triplet_margin, type=float)
     parser.add_argument('--eval_split', default=eval_split, type=str)
@@ -96,7 +98,7 @@ def parse():
     parser.add_argument('--use_faiss', default=True, action='store_true')
     parser.add_argument('--read_cache_feat', default=False, action='store_true')
     parser.add_argument('--memory_leak_debug', default=False, action='store_true')
-    parser.add_argument('--topk_per_video', default=None,  type=int)
+    parser.add_argument('--topk_per_video', default=None, type=int)
     parser.add_argument('--percent_per_gallery', default=None, type=float)
     parser.add_argument('--triple_eval', action='store_true')
 
@@ -111,15 +113,14 @@ def parse():
 def adjust_learning_rate(startlr, decay_rate, optimizer, epoch):
     decay_rates = int(decay_rate)
     if epoch == decay_rates:
-            for g_id, param_group in enumerate(optimizer.param_groups):
-                origin_lr = param_group['lr']
-                param_group['lr'] = origin_lr*0.1
-                logger.warning('update optimizer group {} from lr = {} to {}'.format(g_id, origin_lr, param_group['lr']))
+        for g_id, param_group in enumerate(optimizer.param_groups):
+            origin_lr = param_group['lr']
+            param_group['lr'] = origin_lr * 0.1
+            logger.warning('update optimizer group {} from lr = {} to {}'.format(g_id, origin_lr, param_group['lr']))
 
-    show_lr=optimizer.param_groups[0]['lr']
+    show_lr = optimizer.param_groups[0]['lr']
     logger.warning("current lr={}".format(show_lr))
     return show_lr
-
 
 
 def part(x, iter_size):
@@ -143,7 +144,7 @@ def train(loader, model, optimizer, epoch, args):
     iter_size = 1.0
     import torch.nn as nn
     ce_loss_criterion = nn.CrossEntropyLoss()
-    triple_loss_criterion = nn.TripletMarginLoss(margin = args.triplet_margin, p = 2)
+    triple_loss_criterion = nn.TripletMarginLoss(margin=args.triplet_margin, p=2)
     for i, (input, meta) in tqdm(enumerate(part(loader, iter_size)), desc='Train Epoch'):
         if short_train_num <= i and args.debug: break
         data_time.update(timer.thetime() - timer.end)
@@ -156,18 +157,17 @@ def train(loader, model, optimizer, epoch, args):
         input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
         output, metric_feat = model(input)
         ce_loss = ce_loss_criterion(output.cuda(), target.long().cuda())
-        loss = ce_loss #+ triple_loss
+        loss = ce_loss  # + triple_loss
 
         loss.backward()
         losses.update(loss.item())
         ce_losses.update(ce_loss.item())
-        #triple_losses.update(triple_loss.item())
+        # triple_losses.update(triple_loss.item())
         if i % args.accum_grad == args.accum_grad - 1:
             optimizer.step()
             optimizer.zero_grad()
 
-
-        if i % args.print_freq == 0 and i>0:
+        if i % args.print_freq == 0 and i > 0:
             logger.info('[{0}][{1}/{2}({3})]\t'
                         'Dataload_Time={data_time.avg:.3f}\t'
                         'Loss={loss.avg:.4f}\t'
@@ -175,17 +175,17 @@ def train(loader, model, optimizer, epoch, args):
                         'LR={cur_lr:.7f}\t'
                         'bestAP={ap:.3f}'.format(
                 epoch, i, int(len(loader) * iter_size), len(loader),
-                data_time=data_time, loss=losses, ce_loss=ce_losses,  ap=args.best_score,
+                data_time=data_time, loss=losses, ce_loss=ce_losses, ap=args.best_score,
                 cur_lr=cur_lr))
             losses.reset()
             ce_losses.reset()
 
 
-
 def val(args, model, triple_eval=False):
     model.eval()
+
     def feat_func(input):
-        logits, metric_feat= model(input)  # [B,C]
+        logits, metric_feat = model(input)  # [B,C]
         # metric_feat = F.normalize(metric_feat, p=2, dim=1)
         return metric_feat.data.cpu().numpy()
 
@@ -193,7 +193,7 @@ def val(args, model, triple_eval=False):
         arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
         score_dict = arv_retrieval.evaluation()
     elif args.eval_untrimmed:
-        arv_retrieval = ARV_Retrieval_Untrimmed(args=args, feat_extract_func=feat_func)
+        arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
         score_dict = arv_retrieval.evaluation()
     else:
         if args.triple_eval:
@@ -201,7 +201,7 @@ def val(args, model, triple_eval=False):
             score_dict = arv_retrieval.evaluation()
             arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
             arv_retrieval.evaluation()
-            arv_retrieval = ARV_Retrieval_Untrimmed(args=args, feat_extract_func=feat_func)
+            arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
             arv_retrieval.evaluation()
         else:
             arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
@@ -211,10 +211,8 @@ def val(args, model, triple_eval=False):
     return score_dict
 
 
-
 def get_model(args):
-
-    from resnet18_3d_f2f import ResNet3D,BasicBlock
+    from resnet18_3d_f2f import ResNet3D, BasicBlock
     model = ResNet3D(BasicBlock, [2, 2, 2, 2], num_classes=args.nclass)  # 50
     if args.pretrained:
         print("loading pretrained weight.!")
@@ -225,12 +223,13 @@ def get_model(args):
         if args.dropout != 0 and isinstance(module, torch.nn.modules.Dropout):
             logger.warning('setting Dropout p to {}'.format(args.dropout))
             module.p = args.dropout
-    #from models.wrappers.default_wrapper import DefaultWrapper
-    #model = DefaultWrapper(model, args)
+    # from models.wrappers.default_wrapper import DefaultWrapper
+    # model = DefaultWrapper(model, args)
     from model_utils import set_distributed_backend
     model = set_distributed_backend(model, args)
 
     return model
+
 
 def main():
     args = parse()
@@ -243,9 +242,10 @@ def main():
     seed(args.manual_seed)
 
     model = get_model(args)
-    #import models;args.arch="resnet18_3d_f2f";args.wrapper="default_wrapper";model = models.get.get_model(args)
-    from dataloader_baseline import get_my_dataset;train_loader = get_my_dataset(args)
-    #from datasets.get import get_dataset;args.dataset = "arv120_20_60_triplet_clsrank_fs";train_loader = get_dataset(args)
+    # import models;args.arch="resnet18_3d_f2f";args.wrapper="default_wrapper";model = models.get.get_model(args)
+    from dataloader_baseline import get_my_dataset;
+    train_loader = get_my_dataset(args)
+    # from datasets.get import get_dataset;args.dataset = "arv120_20_60_triplet_clsrank_fs";train_loader = get_dataset(args)
 
     if args.evaluate:
         logger.info(vars(args))
@@ -275,7 +275,6 @@ def main():
     model_summary(model)
     optimizer_summary(optimizer)
 
-
     logger.info(vars(args))
 
     for epoch in range(args.epochs):
@@ -304,7 +303,7 @@ def main():
     model.load_state_dict(saved_dict['state_dict'], strict=True)
     args.eval_split = 'testing'
     logger.info(vars(args))
-    score_dict = val(args=args, model=model,triple_eval=True)
+    score_dict = val(args=args, model=model, triple_eval=True)
 
 
 def pdbmain():

@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 resolution = 100
-input_json = "shit.json"
+input_json = "video_segment.json"
 
 minimal_sample_per_novel_class = 5
 noisy_label = "noisy_activity"
@@ -162,7 +162,7 @@ for _subset in ['training','validation','testing']:
         for label in arv_test_label:
                 print("{}, novel_class(from test-label), #{}={}".format(_subset,label,len(_dataset_dict[label])))
         for label in [noisy_label]:
-                print("{}, shit_class, #{}={}".format(_subset,label,len(_dataset_dict[label])))
+                print("{}, noisy_class, #{}={}".format(_subset,label,len(_dataset_dict[label])))
     #_show_class_sample_num()
 
     #avg_video_num_per_class

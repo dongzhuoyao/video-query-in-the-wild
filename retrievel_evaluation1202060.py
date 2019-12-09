@@ -532,7 +532,7 @@ class ARV_Retrieval_Clip():
 
 
 
-class ARV_Retrieval_Untrimmed():
+class ARV_Retrieval_Moment():
     def __init__(self,args, feat_extract_func,metric_func=None):
         self.temporal_stride = args.temporal_stride
         self.feat_extract_func = feat_extract_func

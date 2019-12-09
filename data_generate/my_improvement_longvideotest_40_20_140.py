@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 resolution = 100
-input_json = "shit.json"
+input_json = "video_segment.json"
 #output_json = 'arv_db_untrimmed.json'
 output_json = 'arv_db_40_20_140_untrimmed.json'
 minimal_sample_per_novel_class = 5
@@ -125,7 +125,7 @@ print(np.histogram(np.array(gallery_duration_list), bins=[0, 20, 40,  60,  80,  
 
 
 
-print("shit")
+print("done")
 
 
 

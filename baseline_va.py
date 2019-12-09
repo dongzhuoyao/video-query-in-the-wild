@@ -41,7 +41,7 @@ nclass = 200
 
 arch = 'resnet18_3d_f2f_memnlfixv3_reg_temp';temperature=0.1
 cur_dataset = "arv120_20_60_triplet_clsrank_fs"
-from retrievel_evaluation1202060 import ARV_Retrieval_Clip,ARV_Retrieval_Untrimmed,ARV_Retrieval
+from retrievel_evaluation1202060 import ARV_Retrieval_Clip,ARV_Retrieval_Moment,ARV_Retrieval
 cur_criterion = 'crossentropy_criterion'
 
 init_lr = 1e-4
@@ -243,7 +243,7 @@ def val(args, model, triple_eval=False):
         arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
         score_dict = arv_retrieval.evaluation()
     elif args.eval_untrimmed:
-        arv_retrieval = ARV_Retrieval_Untrimmed(args=args, feat_extract_func=feat_func)
+        arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
         score_dict = arv_retrieval.evaluation()
     else:
         if triple_eval:
@@ -251,7 +251,7 @@ def val(args, model, triple_eval=False):
             score_dict = arv_retrieval.evaluation()
             arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
             arv_retrieval.evaluation()
-            arv_retrieval = ARV_Retrieval_Untrimmed(args=args, feat_extract_func=feat_func)
+            arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
             arv_retrieval.evaluation()
         else:
             arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)

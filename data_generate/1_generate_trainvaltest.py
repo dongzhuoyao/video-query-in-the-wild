@@ -2,18 +2,17 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-resolution = 100
-input_json = "shit.json"
+
+input_json = "video_segment.json"
+from activitynet_label_100_20_80 import activitynet_label_list,arv_val_label,arv_test_label,arv_train_label
+output_json = 'arv_db_100_20_80.json'
 
 minimal_sample_per_novel_class = 5
 noisy_label = "noisy_activity"
 validation_sample_per_class = 10
+activitynet_data = json.load(open('./activity_net.v1-3.min.json'))
+data = json.load(open(input_json))
 
-#from activitynet_label import activitynet_label_list,arv_val_label,arv_test_label,arv_train_label
-#output_json = 'arv_db_0830.json'
-
-from activitynet_label_100_20_80 import activitynet_label_list,arv_val_label,arv_test_label,arv_train_label
-output_json = 'arv_db_100_20_80.json'
 
 print("train label number={}".format(len(arv_train_label)))
 print(", ".join(arv_train_label))
@@ -23,9 +22,6 @@ print("testing label number={}".format(len(arv_test_label)))
 print(", ".join(arv_test_label))
 
 
-
-activitynet_data = json.load(open('./activity_net.v1-3.min.json'))
-data = json.load(open(input_json))
 my_dict = dict(training=dict(),validation=dict(),testing=dict())
 
 def _add_item_to_dict(_dict,label,data):
@@ -34,6 +30,8 @@ def _add_item_to_dict(_dict,label,data):
     else:
         _dict[label] = [data]
     return _dict
+
+
 
 for d in data:
     if d['activitynet_subset'] == "training":
@@ -45,8 +43,6 @@ for d in data:
 
 #generating validation data and clean up training data.
 new_training_list = []
-
-
 
 for label in arv_train_label:
     data_list = my_dict['training'][label]
@@ -143,8 +139,6 @@ for cls_dict in my_dict[cur_split].keys():
 
 with open(output_json, 'w') as f:
     json.dump(my_dict, f)
-
-
 ####### statistics ##########
 avg_video_num_per_class_hist= []
 avg_fg_duration_hist = []
@@ -162,7 +156,7 @@ for _subset in ['training','validation','testing']:
         for label in arv_test_label:
                 print("{}, novel_class(from test-label), #{}={}".format(_subset,label,len(_dataset_dict[label])))
         for label in [noisy_label]:
-                print("{}, shit_class, #{}={}".format(_subset,label,len(_dataset_dict[label])))
+                print("{}, noisy_class, #{}={}".format(_subset,label,len(_dataset_dict[label])))
     #_show_class_sample_num()
 
     #avg_video_num_per_class
