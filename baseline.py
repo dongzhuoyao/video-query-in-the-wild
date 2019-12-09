@@ -8,6 +8,7 @@ import sys
 from pytorchgo.utils import logger
 from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary, set_gpu
 import cv2
+import torch.nn as nn
 
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
@@ -116,28 +117,59 @@ def adjust_learning_rate(startlr, decay_rate, optimizer, epoch):
     return show_lr
 
 
-def part(x, iter_size):
-    n = int(len(x) * iter_size)
-    if iter_size > 1.0:
-        x = itertools.chain.from_iterable(itertools.repeat(x))
-    return itertools.islice(x, n)
+
+def get_model(args):
+    from resnet18_3d_f2f import ResNet3D, BasicBlock
+    model = ResNet3D(BasicBlock, [2, 2, 2, 2], num_classes=args.nclass)  # 50
+    if args.pretrained:
+        print("loading pretrained weight.!")
+        from torchvision.models.resnet import resnet18
+        model2d = resnet18(pretrained=True)
+        model.load_2d(model2d)
+    from model_utils import set_distributed_backend
+    model = set_distributed_backend(model, args)#TODO, dongzhuoyao, why this sentence is so vital for speed up?
+    return model
+
+
+def val(args, model):
+    model.eval()
+
+    def feat_func(input):
+        logits, metric_feat = model(input)  # [B,C]
+        # metric_feat = F.normalize(metric_feat, p=2, dim=1),TODO
+        return metric_feat.data.cpu().numpy()
+
+    if args.eval_clip:
+        arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
+        score_dict = arv_retrieval.evaluation()
+    elif args.eval_moment:
+        arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
+        score_dict = arv_retrieval.evaluation()
+    elif args.eval_all:
+        arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
+        score_dict = arv_retrieval.evaluation()
+        arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
+        arv_retrieval.evaluation()
+        arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
+        arv_retrieval.evaluation()
+    else:# only evaluate trimmed retrieval by default
+        arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
+        score_dict = arv_retrieval.evaluation()
+    model.train()
+    return score_dict
 
 
 def train(loader, model, optimizer, epoch, args):
     timer = Timer()
     data_time = AverageMeter()
     losses = AverageMeter()
-    triple_losses = AverageMeter()
     ce_losses = AverageMeter()
-
     # switch to train mode
     cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
     model.train()
     optimizer.zero_grad()
-    iter_size = 1.0
-    import torch.nn as nn
     ce_loss_criterion = nn.CrossEntropyLoss()
-    for i, (input, meta) in tqdm(enumerate(part(loader, iter_size)), desc='Train Epoch'):
+    for i, (input, meta) in tqdm(enumerate(loader), desc='Train Epoch'):
         if args.debug and i>=debug_short_train_num: break
         data_time.update(timer.thetime() - timer.end)
 
@@ -165,66 +197,20 @@ def train(loader, model, optimizer, epoch, args):
                         'CELoss={ce_loss.avg:.4f}\t'
                         'LR={cur_lr:.7f}\t'
                         'bestAP={ap:.3f}'.format(
-                epoch, i, int(len(loader) * iter_size), len(loader),
+                epoch, i, len(loader), len(loader),
                 data_time=data_time, loss=losses, ce_loss=ce_losses, ap=args.best_score,
                 cur_lr=cur_lr))
             losses.reset()
             ce_losses.reset()
 
 
-def val(args, model):
-    model.eval()
-
-    def feat_func(input):
-        logits, metric_feat = model(input)  # [B,C]
-        # metric_feat = F.normalize(metric_feat, p=2, dim=1)
-        return metric_feat.data.cpu().numpy()
-
-    if args.eval_clip:
-        arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
-        score_dict = arv_retrieval.evaluation()
-    elif args.eval_moment:
-        arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
-        score_dict = arv_retrieval.evaluation()
-    else:
-        if args.eval_all:
-            arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
-            score_dict = arv_retrieval.evaluation()
-            arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
-            arv_retrieval.evaluation()
-            arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
-            arv_retrieval.evaluation()
-        else:
-            arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
-            score_dict = arv_retrieval.evaluation()
-
-    model.train()
-    return score_dict
-
-
-def get_model(args):
-    from resnet18_3d_f2f import ResNet3D, BasicBlock
-    model = ResNet3D(BasicBlock, [2, 2, 2, 2], num_classes=args.nclass)  # 50
-    if args.pretrained:
-        print("loading pretrained weight.!")
-        from torchvision.models.resnet import resnet18
-        model2d = resnet18(pretrained=True)
-        model.load_2d(model2d)
-    from model_utils import set_distributed_backend
-    model = set_distributed_backend(model, args)#TODO, dongzhuoyao, why this sentence is so vital for speed up?
-    return model
-
-
 def main():
     args = parse()
-
     set_gpu(args.gpu)
-
     args.best_score = 0
     args.best_result_dict = {}
 
     seed(args.manual_seed)
-
     model = get_model(args)
     # import models;args.arch="resnet18_3d_f2f";args.wrapper="default_wrapper";model = models.get.get_model(args)
     from dataloader_baseline import get_my_dataset;
@@ -262,9 +248,7 @@ def main():
     logger.info(vars(args))
 
     for epoch in range(args.epochs):
-
         train(train_loader, model, optimizer, epoch, args)
-
         if (epoch % eval_per == 0 and epoch > 0) or epoch == args.epochs - 1:
             score_dict = val(args=args, model=model)
 
