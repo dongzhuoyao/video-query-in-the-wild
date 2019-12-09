@@ -3,12 +3,12 @@
 
 ## TODO
 
-- Flexible dataloader
 - Flexible novelty gain
 - Evaluation into dataloader?
 - Flexible evaluation
 - word embedding into sub_directory
 - visual bank implementation check
+- Flexible dataloader for ranking baseline
 
 ## Install
 
