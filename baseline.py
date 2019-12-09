@@ -210,15 +210,8 @@ def get_model(args):
         from torchvision.models.resnet import resnet18
         model2d = resnet18(pretrained=True)
         model.load_2d(model2d)
-    for module in model.modules():
-        if args.dropout != 0 and isinstance(module, torch.nn.modules.Dropout):
-            logger.warning('setting Dropout p to {}'.format(args.dropout))
-            module.p = args.dropout
-    # from models.wrappers.default_wrapper import DefaultWrapper
-    # model = DefaultWrapper(model, args)
     from model_utils import set_distributed_backend
-    model = set_distributed_backend(model, args)
-
+    model = set_distributed_backend(model, args)#TODO, dongzhuoyao, why this sentence is so vital for speed up?
     return model
 
 
