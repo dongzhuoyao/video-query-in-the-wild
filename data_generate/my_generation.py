@@ -9,7 +9,6 @@ data = json.load(open('./activity_net.v1-3.min.json'))
 
 saliency_ratio = 2
 resolution = 100
-
 noisy_label = "noisy_activity"
 noise_video_scan_stride  = 10*resolution #unit: sec
 noise_video_length_random = [10*resolution, 180*resolution] #unit: sec
@@ -44,6 +43,7 @@ for video_id, video in tqdm(data['database'].items()):
     for segment_s, segment_t  in segment_list:
         if segment_s == segment_t: continue#bad data in ActivityNet!
         if segment_t - segment_s <activity_minimal_sec:continue#too short,skip!
+
         padding_left = random.randint(0,int((segment_t - segment_s)*saliency_ratio))
         padding_right = random.randint(0,int((segment_t - segment_s)*saliency_ratio))
 
@@ -78,7 +78,7 @@ for video_id, video in tqdm(data['database'].items()):
         discretized_flag[segment_s-padding_left:segment_t + padding_right] = 1
         result_list.append(dict(
             border = [(segment_s-padding_left)/resolution, (segment_t + padding_right)/resolution],
-            segment = [(segment_s)/resolution, (segment_t)/resolution],
+            segment = [segment_s/resolution, segment_t/resolution],
             label = label_indicator_dict[(segment_s+segment_t)//2],
             video_id = video_id,
             activitynet_duration = duration/resolution,

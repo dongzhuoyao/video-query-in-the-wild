@@ -1,5 +1,3 @@
-
-""" Video loader for the Charades dataset """
 import torch,os,time
 import torchvision.transforms as transforms
 import numpy as np
