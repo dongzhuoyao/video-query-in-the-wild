@@ -3,10 +3,10 @@
 
 ## TODO
 
-
-- Evaluation into dataloader?
+- Evaluation metric tidy up
+- word embedding into sub_directory, set word embedding on the fly in an elegant way
+- Evaluation into dataloader, think about an elegant way
 - Flexible evaluation
-- word embedding into sub_directory
 - Flexible novelty gain
 - visual bank implementation check
 - Flexible dataloader for ranking baseline

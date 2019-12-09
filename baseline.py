@@ -25,7 +25,7 @@ from tqdm import tqdm
 import argparse
 import os
 
-short_train_num = 1
+debug_short_train_num = 1
 novel_img_num = 5
 input_size = 112
 nclass = 200
@@ -36,8 +36,8 @@ init_lr = 1e-4
 eval_per = 15
 lr_decay_rate = '90'
 epochs = 150
-batch_size = 12
-test_batch_size = 12 * 3
+batch_size = 10
+test_batch_size = 10 * 3
 triplet_margin = 1
 pretrained = True
 eval_split = 'testing'
@@ -78,30 +78,26 @@ def parse():
     parser.add_argument('--accum_grad', default=1, type=int)
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--weight_decay', '--wd', default=1e-5, type=float, help='weight decay (default: 1e-4)')
-    parser.add_argument('--freeze_batchnorm', dest='freeze_batchnorm', action='store_true')
-    parser.add_argument('--replace_last_layer', dest='freeze_batchnorm', default=True, action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--gpu', default='0')
-    parser.add_argument('--test_load',
-                        type=str)  # "'train_log/v2.arv.resnet18_3d_f2f.evaltest.nonovel.clsrank.bs12/best.pth.tar'
+    parser.add_argument('--test_load', type=str)
     parser.add_argument('--novel_img_num', default=novel_img_num, type=int)
     parser.add_argument('--triplet_margin', default=triplet_margin, type=float)
     parser.add_argument('--eval_split', default=eval_split, type=str)
     parser.add_argument('--train_frame', default=train_frame, type=int)
     parser.add_argument('--test_frame_num', default=train_frame, type=int)
     parser.add_argument('--no_novel', default=no_novel, action='store_true')
-    parser.add_argument('--eval_untrimmed', action='store_true')
+    parser.add_argument('--eval_moment', action='store_true')
     parser.add_argument('--eval_clip', action='store_true')
     parser.add_argument('--temporal_stride', default=temporal_stride, type=int)
     parser.add_argument('--clip_sec', default=clip_sec, type=int)
     parser.add_argument('--metric_feat_dim', default=metric_feat_dim, type=int)
     parser.add_argument('--read_cache_feat', default=False, action='store_true')
     parser.add_argument('--memory_leak_debug', default=False, action='store_true')
-    parser.add_argument('--triple_eval', action='store_true')
+    parser.add_argument('--eval_all', action='store_true')
 
     args = parser.parse_args()
 
-    args.replace_last_layer = True
     args.pretrained = pretrained
 
     return args
@@ -141,9 +137,8 @@ def train(loader, model, optimizer, epoch, args):
     iter_size = 1.0
     import torch.nn as nn
     ce_loss_criterion = nn.CrossEntropyLoss()
-    triple_loss_criterion = nn.TripletMarginLoss(margin=args.triplet_margin, p=2)
     for i, (input, meta) in tqdm(enumerate(part(loader, iter_size)), desc='Train Epoch'):
-        if short_train_num <= i and args.debug: break
+        if args.debug and i>=debug_short_train_num: break
         data_time.update(timer.thetime() - timer.end)
 
         _batch_size = len(meta)
@@ -154,12 +149,11 @@ def train(loader, model, optimizer, epoch, args):
         input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
         output, metric_feat = model(input)
         ce_loss = ce_loss_criterion(output.cuda(), target.long().cuda())
-        loss = ce_loss  # + triple_loss
+        loss = ce_loss
 
         loss.backward()
         losses.update(loss.item())
         ce_losses.update(ce_loss.item())
-        # triple_losses.update(triple_loss.item())
         if i % args.accum_grad == args.accum_grad - 1:
             optimizer.step()
             optimizer.zero_grad()
@@ -178,7 +172,7 @@ def train(loader, model, optimizer, epoch, args):
             ce_losses.reset()
 
 
-def val(args, model, triple_eval=False):
+def val(args, model):
     model.eval()
 
     def feat_func(input):
@@ -189,11 +183,11 @@ def val(args, model, triple_eval=False):
     if args.eval_clip:
         arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
         score_dict = arv_retrieval.evaluation()
-    elif args.eval_untrimmed:
+    elif args.eval_moment:
         arv_retrieval = ARV_Retrieval_Moment(args=args, feat_extract_func=feat_func)
         score_dict = arv_retrieval.evaluation()
     else:
-        if args.triple_eval:
+        if args.eval_all:
             arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
             score_dict = arv_retrieval.evaluation()
             arv_retrieval = ARV_Retrieval_Clip(args=args, feat_extract_func=feat_func)
@@ -300,7 +294,7 @@ def main():
     model.load_state_dict(saved_dict['state_dict'], strict=True)
     args.eval_split = 'testing'
     logger.info(vars(args))
-    score_dict = val(args=args, model=model, triple_eval=True)
+    score_dict = val(args=args, model=model)
 
 
 def pdbmain():
