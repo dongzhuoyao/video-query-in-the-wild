@@ -23,7 +23,7 @@ from dongzhuoyao_utils import fps,noisy_label,activtynet_fps3_path,read_video,re
 
 
 
-class VQActivityNet(data.Dataset):
+class VRActivityNet(data.Dataset):
     def __init__(self, args):
 
         self.num_classes = len(activitynet_label_list)
@@ -141,7 +141,7 @@ def get_my_dataset(args):
             return default_collate(batch)
 
     train_loader = torch.utils.data.DataLoader(
-        VQActivityNet(args=args), batch_size=args.batch_size, collate_fn=my_collate, shuffle=True, drop_last=True,
+        VRActivityNet(args=args), batch_size=args.batch_size, collate_fn=my_collate, shuffle=True, drop_last=True,
             num_workers=args.workers, pin_memory=False)
     return train_loader
 
@@ -208,7 +208,7 @@ def generate_multi_query(query_list):
     return new_query_list
 
 
-class class_map():
+class evaluation_metric():
     def __init__(self, query_list):
         self.class_dict = dict()
         self.class_agnostic_ap = []
@@ -253,6 +253,8 @@ class class_map():
 
     def set_class_info(self, query_list):
         for q in query_list:
+            q = q[0]
+            assert q['label'] in arv_train_label+arv_test_label#only allow query video from train, test classes.
             if q['retrieval_type'] == 'base':
                 self.base_classes.append(q['label'])
             elif q['retrieval_type'] == 'novel':
@@ -387,29 +389,30 @@ class class_map():
         for cls_name, ap_list in self.class_dict.items():
             self.class_dict[cls_name] = Average(ap_list)
 
+
+        o1_class_agnostic_map = Average(self.class_agnostic_ap)
+        o1_class_specific_map = Average(base_ap_list + novel_ap_list)
+        o1_class_specific_base_map = Average(base_ap_list)
+        o1_class_specific_novel_map = Average(novel_ap_list)
+        o1_hmean = stats.hmean([o1_class_specific_base_map + 1e-10, o1_class_specific_novel_map + 1e-10])
+
         class_specific_map = Average(list(self.class_dict.values()))
         class_specific_base_map = Average([self.class_dict[_cls_name] for _cls_name in self.base_classes])
         class_specific_novel_map = Average([self.class_dict[_cls_name] for _cls_name in self.novel_classes])
         hmean = stats.hmean([class_specific_base_map + 1e-10, class_specific_novel_map + 1e-10])
 
-        class_agnostic_map = Average(self.class_agnostic_ap)
-
-        avg1_class_specific_map = Average(base_ap_list + novel_ap_list)
-        avg1_class_specific_base_map = Average(base_ap_list)
-        avg1_class_specific_novel_map = Average(novel_ap_list)
-        avg1_hmean = stats.hmean([avg1_class_specific_base_map + 1e-10, avg1_class_specific_novel_map + 1e-10])
-
         logger.warning("*" * 30)
-        logger.warning("(report metric)1-order harmonic map={}".format(avg1_hmean))
-        logger.warning("(report metric)1-order class_specific_base_map={}".format(avg1_class_specific_base_map))
-        logger.warning("(report metric)1-order class_specific_novel_map={}".format(avg1_class_specific_novel_map))
-        logger.warning("1-order class_specific_map={}".format(avg1_class_specific_map))
+        logger.warning("(report metric)1-order harmonic map={}".format(o1_hmean))
+        logger.warning("(report metric)1-order class_specific_base_map={}".format(o1_class_specific_base_map))
+        logger.warning("(report metric)1-order class_specific_novel_map={}".format(o1_class_specific_novel_map))
+        logger.warning("1-order class_specific_map={}".format(o1_class_specific_map))
+        logger.warning("1-order class_agnostic_map={}".format(o1_class_agnostic_map))
 
         logger.warning("2-order harmonic map={}".format(hmean))
         logger.warning("2-order class_specific_base_map={}".format(class_specific_base_map))
         logger.warning("2-order class_specific_novel_map={}".format(class_specific_novel_map))
         logger.warning("2-order class_specific_map={}".format(class_specific_map))
-        logger.warning("1-order class_agnostic_map(doubtful metric,contain val class?)={}".format(class_agnostic_map))
+
         logger.warning(json_path)
         logger.warning(longvideo_json_path)
 
@@ -433,7 +436,7 @@ class class_map():
             class_specific_map=class_specific_map,
             base_map=class_specific_base_map,
             novel_map=class_specific_novel_map,
-            old_ap=class_agnostic_map,
+            old_ap=o1_class_agnostic_map,
             recall=self.full_retrieval_top,
             base_recall=self.base_retrieval_top,
             novel_recall=self.novel_retrieval_top,
@@ -608,12 +611,12 @@ class ARV_Retrieval_Clip():
         logger.warning(
             "start ranking, query size={}, gallery clips size={}".format(len(self.query_list), len(self.gallery_list)))
 
-        self.class_map_evaluation = class_map(self.query_list)
         if self.args.debug:
             self.query_list = [[i] for i in self.query_list]
         else:
             self.query_list = generate_multi_query(self.query_list)
         self.query_list = [q for q in self.query_list if q[0]['is_query'] == 1]
+        self.class_map_evaluation = evaluation_metric(self.query_list)
 
         for _ in tqdm(range(len(self.query_list)), total=len(self.query_list), desc="eval_clips, ranking"):
             queries = self.query_list[_]
@@ -847,13 +850,13 @@ class ARV_Retrieval_Moment():
         logger.warning("start ranking, query size={}, gallery potential moments size={}".format(len(self.query_list),
                                                                                              len(self.gallery_list)))
 
-        self.class_map_evaluation05 = class_map(self.query_list)
         if self.args.debug:
             self.query_list = [[i] for i in self.query_list]
         else:
             self.query_list = generate_multi_query(self.query_list)
 
         self.query_list = [q for q in self.query_list if q[0]['is_query']==1]
+        self.class_map_evaluation05 = evaluation_metric(self.query_list)
 
         from multiprocessing import Process, Queue, JoinableQueue, cpu_count
         def work(id, jobs, result):  # https://gist.github.com/brantfaircloth/1255715/5ce00c58ae8775c7d75a7bc08ab75d5c7f665bca
@@ -1036,10 +1039,11 @@ class ARV_Retrieval():
         logger.warning(
             "start ranking, query size={}, gallery size={}".format(len(self.query_list), len(self.gallery_list)))
 
-        self.class_map_evaluation = class_map(self.query_list)
+
         self.original_query_list = self.query_list
         self.query_list = generate_multi_query(self.query_list)
         self.query_list = [q for q in self.query_list if q[0]['is_query'] == 1]
+        self.class_map_evaluation = evaluation_metric(self.query_list)
 
         for _, queries in tqdm(enumerate(self.query_list), total=len(self.query_list),
                                desc="{}: ranking".format(self.split)):
