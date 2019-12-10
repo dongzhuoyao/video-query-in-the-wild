@@ -10,8 +10,8 @@
 - ~~Flexible novelty gain~~
 - ~~word embedding into sub_directory, set word embedding on the fly in an elegant way~~
 - ~~Evaluation into dataloader,~~think about an elegant way
+- Flexible evaluation, change class_split
 - extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
-- Flexible evaluation
 - visual bank implementation check
 - Flexible dataloader for ranking baseline
 - "noisy"->"distractor"
