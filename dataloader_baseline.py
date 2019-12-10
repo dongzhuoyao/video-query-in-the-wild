@@ -516,22 +516,19 @@ class ARV_Retrieval_Clip():
                         images = torch.from_numpy(images).float().unsqueeze(0)
                         assert images.shape[1] == self.test_frame_num
                         _feats = self.feat_extract_func(images)  # [B,C,T]
-                        # _feats = np.random.rand(1, self.feat_dim, images.shape[1]).astype(np.float32)
                     else:
-                        # print("start={}, num={},whole_frame={}".format(data_batch[0],len(data_batch),activitynet_frame_num))
                         _feats = np.random.rand(1, self.feat_dim, self.test_frame_num).astype(np.float32)
-                    _feats = _feats[:, :, :len(data_batch)]  # truncate when meeting last clip of the long video
-                    _feats = np.transpose(_feats[0], (1, 0))  # C,T=>T,C
+                    _feats = _feats[0][:, :len(data_batch)]  # truncate when meeting last clip of the long video
                     feats_list.append(_feats)
-                _feats = np.concatenate(feats_list, axis=0)
-                assert _feats.shape[0] == activitynet_frame_num // self.temporal_stride, \
-                    "{} not equal to {}".format(_feats.shape[0], activitynet_frame_num // self.temporal_stride)
-                self.gallery_list[proceeded_id]['feat'] = _feats#[T,C]
+                _feats = np.concatenate(feats_list, axis=1)
+                assert _feats.shape[1] == activitynet_frame_num // self.temporal_stride, \
+                    "{} not equal to {}".format(_feats.shape[1], activitynet_frame_num // self.temporal_stride)
+                self.gallery_list[proceeded_id]['feat'] = _feats#[C,T]
 
             self.gallery_list = [g for g in self.gallery_list if 'feat' in g]  # useful when debugging
 
             def garner_feat(_g, clip_sec=self.clip_sec):
-                length = _g['feat'].shape[0]
+                length = _g['feat'].shape[1]
                 r_list = []
                 annotations = _g['annotations']
 
@@ -555,7 +552,7 @@ class ARV_Retrieval_Clip():
                     r_list.append(dict(
                         feat_indice=loc_feat,
                         feat=
-                        np.mean(_g['feat'][loc_feat[0]:loc_feat[1]], axis=0),
+                        np.mean(_g['feat'][:,loc_feat[0]:loc_feat[1]], axis=1),
                         duration_sec=clip_sec,
                         loc_sec=loc_sec,
                         clip_label=cal_label(loc_sec),
@@ -741,16 +738,14 @@ class ARV_Retrieval_Moment():
                                             activitynet_frame_num=activitynet_frame_num)
                         images = torch.from_numpy(images).float().unsqueeze(0)
                         _feats = self.feat_extract_func(images)
-
-                    _feats = _feats[:, :, :len(data_batch)]  # truncate when meeting last clip of the long video
-                    _feats = np.transpose(_feats[0], (1, 0))  # >C,T=>T,C
+                    _feats = _feats[0][:, :len(data_batch)]  # truncate when meeting last clip of the long video
                     feats_list.append(_feats)
-                _feats = np.concatenate(feats_list, axis=0)
-                assert _feats.shape[0] == activitynet_frame_num // self.temporal_stride
+                _feats = np.concatenate(feats_list, axis=1)
+                assert _feats.shape[1] == activitynet_frame_num // self.temporal_stride
                 self.gallery_list[proceeded_id]['feat'] = _feats#[T,C]
 
             def garner_feat(_g, clip_length_sec=5, max_clip_per_moment=26):
-                feat_length = _g['feat'].shape[0]
+                feat_length = _g['feat'].shape[1]
                 r_list = []
                 annotations = _g['annotations']
 
@@ -791,7 +786,7 @@ class ARV_Retrieval_Moment():
                             continue
 
                         r_list.append(dict(
-                            feat=np.mean(_g['feat'][loc_feat[0]:loc_feat[1]], axis=0),
+                            feat=np.mean(_g['feat'][:,loc_feat[0]:loc_feat[1]], axis=1),
                             video_id=_g['video_id'],
                             hit_list=cal_hit(loc_sec)
                         )
