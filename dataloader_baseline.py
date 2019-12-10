@@ -417,7 +417,6 @@ class evaluation_metric():
         logger.warning(longvideo_json_path)
 
         # save confusion matrix related json.
-
         cm_dict = dict(
             gt_labels=self.cm_gt_labels,
             label=self.cm_labels,
@@ -450,11 +449,7 @@ class ARV_Retrieval_Clip():
         self.feat_extract_func = feat_extract_func
         self.feat_dim = args.metric_feat_dim
         self.clip_sec = args.clip_sec
-        if args.test_frame_num == None:
-            self.test_frame_num = 128
-            logger.warning("test_frame_num is None, set default 128")
-        else:
-            self.test_frame_num = args.test_frame_num
+        self.test_frame_num = args.test_frame_num
         self.args = args
         self.test_batch_size = args.test_batch_size
         self.input_size = args.input_size
@@ -679,11 +674,7 @@ class ARV_Retrieval_Moment():
         self.feat_extract_func = feat_extract_func
         self.args = args
         self.test_batch_size = args.test_batch_size
-        if args.test_frame_num == None:
-            self.test_frame_num = 128
-            logger.warning("test_frame_num is None, set default 128")
-        else:
-            self.test_frame_num = args.test_frame_num
+        self.test_frame_num = args.test_frame_num
         self.input_size = args.input_size
         self.possible_classes = list(set(arv_train_label) | set(arv_test_label))
         self.feat_dim = args.metric_feat_dim
@@ -959,11 +950,7 @@ class ARV_Retrieval():
         self.args = args
         self.test_batch_size = args.test_batch_size
         self.input_size = args.input_size
-        if args.test_frame_num == None:
-            self.test_frame_num = 128
-            logger.warning("test_frame_num is None, set default 128")
-        else:
-            self.test_frame_num = args.test_frame_num
+        self.test_frame_num = args.test_frame_num
         self.feat_dim = args.metric_feat_dim
         self.load_data()
         logger.info("loading {} data: {}".format(self.split, len(self.data_list[self.split])))
