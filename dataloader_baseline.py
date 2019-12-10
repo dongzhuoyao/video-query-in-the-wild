@@ -2,10 +2,9 @@ import torch,os
 import torchvision.transforms as transforms
 import numpy as np
 import datasets.video_transforms as videotransforms
-from tqdm import tqdm
 import random,json
 import torch.utils.data as data
-from data_generate.activitynet_label_120_20_60  import arv_train_label,arv_test_label,arv_val_label,activitynet_label_list,json_path
+from data_generate.activitynet_label_100_20_80  import arv_train_label,arv_test_label,arv_val_label,activitynet_label_list,json_path
 
 from dongzhuoyao_utils import fps,noisy_label,activtynet_fps3_path,read_video,read_activitynet
 
@@ -16,7 +15,6 @@ class VQActivityNet(data.Dataset):
         self.num_classes = len(activitynet_label_list)
         self.transform = transforms.Compose([
                 videotransforms.RandomCrop(args.input_size),
-                # videotransforms.RandomHorizontalFlip()
             ])
         self.input_size = args.input_size
         self.fps = fps
@@ -41,17 +39,12 @@ class VQActivityNet(data.Dataset):
             for d in self.data_dict[self.split][cls_name]:
                 activitynet_subset = d['activitynet_subset']
                 video_id = d['video_id']
-                #if video_id != "2YSsqivrvR4":continue
                 if os.path.isdir(os.path.join(activtynet_fps3_path,activitynet_subset,video_id)):
                     _new_list.append(d)
                     continue
                 _removed_dict[video_id]="shit"
             self.data_dict[self.split][cls_name] = _new_list
         print("sanity check, removing {} items".format(len(list(_removed_dict.keys()))))
-
-
-
-
 
     def load_data(self):
         self.data_dict = json.load(open(json_path))
@@ -60,10 +53,10 @@ class VQActivityNet(data.Dataset):
         self.cur_label_list = []
         for cls_name, item_list in self.data_dict[self.split].items():
             if cls_name == noisy_label:continue
-            if cls_name in arv_val_label or cls_name in arv_test_label:#only keep minimal novel class
-                new_dict[cls_name] = item_list[:self.novel_img_num]
-            else:
+            if cls_name in arv_train_label:
                 new_dict[cls_name] = item_list
+            else:#only keep minimal novel class
+                new_dict[cls_name] = item_list[:self.novel_img_num]
             self.cur_label_list.append(cls_name)
 
         self.data_dict[self.split]=new_dict#remove novel and noisy label

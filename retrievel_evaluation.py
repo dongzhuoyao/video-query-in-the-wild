@@ -120,7 +120,6 @@ class class_map():
                                    base_y_pred=list(),
                                    novel_y_true=list(),
                                    novel_y_pred=list())
-
         self.set_class_info(query_list)
 
     def set_class_info(self, query_list):
@@ -228,9 +227,9 @@ class class_map():
             self.full_retrieval_top[str(_thres)] = Average(self.full_retrieval_top[str(_thres)])
             self.base_retrieval_top[str(_thres)] = Average(self.base_retrieval_top[str(_thres)])
             self.novel_retrieval_top[str(_thres)] = Average(self.novel_retrieval_top[str(_thres)])
-            logger.warning("avg1 R@{}={}".format(str(_thres), self.full_retrieval_top[str(_thres)]))
-            logger.warning("avg1 base R@{}={}".format(str(_thres), self.base_retrieval_top[str(_thres)]))
-            logger.warning("avg1 novel R@{}={}".format(str(_thres), self.novel_retrieval_top[str(_thres)]))
+            logger.warning("1-order R@{}={}".format(str(_thres), self.full_retrieval_top[str(_thres)]))
+            logger.warning("1-order base R@{}={}".format(str(_thres), self.base_retrieval_top[str(_thres)]))
+            logger.warning("1-order novel R@{}={}".format(str(_thres), self.novel_retrieval_top[str(_thres)]))
 
             for cls_name, ap_list in self.avg2_full_retrieval_top[str(_thres)].items():
                 self.avg2_full_retrieval_top[str(_thres)][cls_name] = Average(ap_list)  # list to value
@@ -242,9 +241,9 @@ class class_map():
             avg_recall = Average([self.avg2_full_retrieval_top[str(_thres)][_cls_name] for _cls_name in
                                   (self.novel_classes + self.base_classes)])
 
-            logger.warning("avg2 R@{}={}".format(str(_thres), avg_recall))
-            logger.warning("avg2 base R@{}={}".format(str(_thres), base_recall))
-            logger.warning("avg2 novel R@{}={}".format(str(_thres), novel_recall))
+            logger.warning("2-order R@{}={}".format(str(_thres), avg_recall))
+            logger.warning("2-order base R@{}={}".format(str(_thres), base_recall))
+            logger.warning("2-order novel R@{}={}".format(str(_thres), novel_recall))
             logger.warning("-" * 30)
 
         ################
@@ -272,16 +271,16 @@ class class_map():
         avg1_hmean = stats.hmean([avg1_class_specific_base_map + 1e-10, avg1_class_specific_novel_map + 1e-10])
 
         logger.warning("*" * 30)
-        logger.warning("avg2 harmonic map={}".format(hmean))
-        logger.warning("avg2 class_specific_base_map={}".format(class_specific_base_map))
-        logger.warning("avg2 class_specific_novel_map={}".format(class_specific_novel_map))
-        logger.warning("avg2 class_specific_map={}".format(class_specific_map))
-        logger.warning("avg1 class_agnostic_map(doubtful metric,contain val class?)={}".format(class_agnostic_map))
+        logger.warning("(report metric)1-order harmonic map={}".format(avg1_hmean))
+        logger.warning("(report metric)1-order class_specific_base_map={}".format(avg1_class_specific_base_map))
+        logger.warning("(report metric)1-order class_specific_novel_map={}".format(avg1_class_specific_novel_map))
+        logger.warning("1-order class_specific_map={}".format(avg1_class_specific_map))
 
-        logger.warning("(report metric)avg1 harmonic map={}".format(avg1_hmean))
-        logger.warning("(report metric)avg1 class_specific_base_map={}".format(avg1_class_specific_base_map))
-        logger.warning("(report metric)avg1 class_specific_novel_map={}".format(avg1_class_specific_novel_map))
-        logger.warning("avg1 class_specific_map={}".format(avg1_class_specific_map))
+        logger.warning("2-order harmonic map={}".format(hmean))
+        logger.warning("2-order class_specific_base_map={}".format(class_specific_base_map))
+        logger.warning("2-order class_specific_novel_map={}".format(class_specific_novel_map))
+        logger.warning("2-order class_specific_map={}".format(class_specific_map))
+        logger.warning("1-order class_agnostic_map(doubtful metric,contain val class?)={}".format(class_agnostic_map))
         logger.warning(json_path)
         logger.warning(longvideo_json_path)
 
@@ -862,7 +861,6 @@ class ARV_Retrieval():
             self.query_list = object_file['query_list']
             self.gallery_list = object_file['gallery_list']
             logger.warning("load cache_feat from {}".format(cache_path))
-
         else:
             cur_list = list()
             chunk_list = list(chunks(self.data_list[self.split], self.test_batch_size))

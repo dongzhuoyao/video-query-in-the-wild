@@ -131,7 +131,7 @@ def get_model(args):
     return model
 
 
-def val(args, model):
+def do_eval(args, model):
     model.eval()
 
     def feat_func(input):
@@ -228,7 +228,7 @@ def main():
         logger.warning("loading weight {}".format(weight_path))
         model.load_state_dict(saved_dict['state_dict'], strict=True)
         args.read_cache_feat = True
-        score_dict = val(args=args, model=model)
+        score_dict = do_eval(args=args, model=model)
         return
 
     logger.warning("using {}".format(args.optimizer))
@@ -250,7 +250,7 @@ def main():
     for epoch in range(args.epochs):
         train(train_loader, model, optimizer, epoch, args)
         if (epoch % eval_per == 0 and epoch > 0) or epoch == args.epochs - 1:
-            score_dict = val(args=args, model=model)
+            score_dict = do_eval(args=args, model=model)
 
             score = score_dict['ap']
             is_best = score > args.best_score
@@ -271,7 +271,7 @@ def main():
     model.load_state_dict(saved_dict['state_dict'], strict=True)
     args.eval_split = 'testing'
     logger.info(vars(args))
-    score_dict = val(args=args, model=model)
+    score_dict = do_eval(args=args, model=model)
 
 
 def pdbmain():
