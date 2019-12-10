@@ -31,7 +31,7 @@ novel_img_num = 5
 input_size = 112
 nclass = 200
 
-from retrievel_evaluation import ARV_Retrieval, ARV_Retrieval_Clip, ARV_Retrieval_Moment
+from dataloader_baseline import ARV_Retrieval, ARV_Retrieval_Clip, ARV_Retrieval_Moment
 
 init_lr = 1e-4
 eval_per = 15

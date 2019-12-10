@@ -613,6 +613,7 @@ class ARV_Retrieval_Clip():
             self.query_list = [[i] for i in self.query_list]
         else:
             self.query_list = generate_multi_query(self.query_list)
+        self.query_list = [q for q in self.query_list if q[0]['is_query'] == 1]
 
         for _ in tqdm(range(len(self.query_list)), total=len(self.query_list), desc="eval_clips, ranking"):
             queries = self.query_list[_]
@@ -852,6 +853,8 @@ class ARV_Retrieval_Moment():
         else:
             self.query_list = generate_multi_query(self.query_list)
 
+        self.query_list = [q for q in self.query_list if q[0]['is_query']==1]
+
         from multiprocessing import Process, Queue, JoinableQueue, cpu_count
         def work(id, jobs, result):  # https://gist.github.com/brantfaircloth/1255715/5ce00c58ae8775c7d75a7bc08ab75d5c7f665bca
             while True:
@@ -965,7 +968,7 @@ class ARV_Retrieval():
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
-        if self.split == 'training':
+        if self.split == 'training':#evaluate on training data for checking
             raise
             self.data_dict = json.load(open(json_path))
             self.data_list = dict(training=list(), testing=list(), validation=list())
@@ -1036,6 +1039,7 @@ class ARV_Retrieval():
         self.class_map_evaluation = class_map(self.query_list)
         self.original_query_list = self.query_list
         self.query_list = generate_multi_query(self.query_list)
+        self.query_list = [q for q in self.query_list if q[0]['is_query'] == 1]
 
         for _, queries in tqdm(enumerate(self.query_list), total=len(self.query_list),
                                desc="{}: ranking".format(self.split)):

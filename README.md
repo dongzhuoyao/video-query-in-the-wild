@@ -17,6 +17,7 @@
 - Exhaustive search combination result in moment retrieval should be updated
 - should remove background noise for activity.
 - NMS in Moment Retrieval
+- ~~bug:train on 100-20-80, evaluate on 100-100(20+80)~~,re-generate all experimental results
 
 ## Install
 
