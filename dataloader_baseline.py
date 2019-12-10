@@ -6,8 +6,7 @@ import datasets.video_transforms as videotransforms
 from tqdm import tqdm
 import random, json, sklearn
 from data_generate.activitynet_label import arv_train_label, arv_test_label, arv_val_label, activitynet_label_list
-from pytorchgo.utils import logger
-from sklearn import preprocessing as sklearn_preprocessing
+import pytorchgo_logger as logger
 from sklearn.metrics import average_precision_score
 import faiss
 from scipy import stats
@@ -493,7 +492,7 @@ class ARV_Retrieval_Clip():
                     feat = self.feat_extract_func(img)
 
                 assert len(data_batch) == feat.shape[0]
-                tpooled_feat = np.mean(feat[i], axis=-1)
+                tpooled_feat = np.mean(feat, axis=-1)
                 for i in range(len(data_batch)):
                     data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
@@ -639,7 +638,7 @@ class ARV_Retrieval_Clip():
                 query_feat /= self.args.query_num
             else:
                 query_feat = query['feat']
-            D, I = self.faiss_index.search(query_feat, k=self.faiss_xb.shape[0])
+            D, I = self.faiss_index.search(query_feat.reshape(1, query_feat.shape[0]), k=self.faiss_xb.shape[0])
             D = np.squeeze(D)
             I = np.squeeze(I)
 
@@ -713,7 +712,7 @@ class ARV_Retrieval_Moment():
                     img = _pre_process(data_batch, self.input_size, self.test_frame_num)
                     feat = self.feat_extract_func(img)
                 assert len(data_batch) == feat.shape[0]
-                tpooled_feat = np.mean(feat[i], axis=-1)
+                tpooled_feat = np.mean(feat, axis=-1)
                 for i in range(len(data_batch)):
                     data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
@@ -876,7 +875,7 @@ class ARV_Retrieval_Moment():
                     query_feat += queries[_iiii]['feat']
                 query_feat /= self.args.query_num
 
-                D, I = self.faiss_index.search(query_feat, k=self.faiss_xb.shape[0])
+                D, I = self.faiss_index.search(query_feat.reshape(1, query_feat.shape[0]), k=self.faiss_xb.shape[0])
                 D = np.squeeze(D)
                 I = np.squeeze(I)
                 tmp_single_query_hit = []
@@ -989,7 +988,7 @@ class ARV_Retrieval():
                     feat = self.feat_extract_func(img)
                 else:
                     feat = np.random.rand(len(data_batch), self.feat_dim).astype(np.float32)
-                tpooled_feat = np.mean(feat[i], axis=-1)
+                tpooled_feat = np.mean(feat, axis=-1)
                 for i in range(len(data_batch)):
                     data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
@@ -1073,7 +1072,7 @@ class ARV_Retrieval():
             for _iiii in range(self.args.query_num):
                 query_feat += queries[_iiii]['feat']
             query_feat /= self.args.query_num
-            D, I = self.faiss_index.search(query_feat, k=self.faiss_xb.shape[0])
+            D, I = self.faiss_index.search(query_feat.reshape(1, query_feat.shape[0]), k=self.faiss_xb.shape[0])
             D = np.squeeze(D)
             I = np.squeeze(I)
 

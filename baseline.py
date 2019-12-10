@@ -5,8 +5,8 @@ import numpy as np
 from bdb import BdbQuit
 import traceback
 import sys
-from pytorchgo.utils import logger
-from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary, set_gpu
+import pytorchgo_logger as logger
+from pytorch_util import model_summary, optimizer_summary, set_gpu
 import cv2
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,10 +18,7 @@ import resource
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
 resource.setrlimit(resource.RLIMIT_NOFILE, (4096, rlimit[1]))
 
-logger.auto_set_dir()
-
 import torch
-import itertools
 from misc_utils.utils import AverageMeter, Timer
 from tqdm import tqdm
 import argparse
@@ -50,6 +47,7 @@ temporal_stride = 1
 clip_sec = 6
 metric_feat_dim = 512
 
+logger.auto_set_dir()
 
 def parse():
     print('parsing arguments')

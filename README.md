@@ -5,10 +5,11 @@
 
 
 - ~~Evaluation metric tidy up~~
-- normalize uniformly in invoked func.
+- ~~normalize uniformly in invoked func~~
 - decouple with pytorchgo
 - word embedding into sub_directory, set word embedding on the fly in an elegant way
-- Evaluation into dataloader, think about an elegant way
+- ~~Evaluation into dataloader,~~think about an elegant way
+- extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
 - Flexible evaluation
 - Flexible novelty gain
 - visual bank implementation check
