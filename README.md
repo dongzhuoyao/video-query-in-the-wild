@@ -7,8 +7,8 @@
 - ~~Evaluation metric tidy up~~
 - ~~normalize uniformly in invoked func~~
 - ~~decouple with pytorchgo~~
-- Flexible novelty gain
-- word embedding into sub_directory, set word embedding on the fly in an elegant way
+- ~~Flexible novelty gain~~
+- ~~word embedding into sub_directory, set word embedding on the fly in an elegant way~~
 - ~~Evaluation into dataloader,~~think about an elegant way
 - extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
 - Flexible evaluation

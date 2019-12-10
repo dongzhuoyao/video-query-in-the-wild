@@ -35,7 +35,7 @@ class VRActivityNet(data.Dataset):
         self.train_frame = args.train_frame
         self.args = args
         self.split = "training"
-        self.novel_img_num = args.novel_img_num
+        self.novel_num = args.novel_num
 
         self._data = self.load_data()
         self.sanity_check()
@@ -70,7 +70,7 @@ class VRActivityNet(data.Dataset):
             if cls_name in arv_train_label:
                 new_dict[cls_name] = item_list
             else:#only keep minimal novel class
-                new_dict[cls_name] = item_list[:self.novel_img_num]
+                new_dict[cls_name] = item_list[:self.novel_num]
             self.cur_label_list.append(cls_name)
 
         self.data_dict[self.split]=new_dict#remove novel and noisy label

@@ -26,7 +26,7 @@ import argparse
 import os
 
 debug_short_train_num = 1
-novel_img_num = 5
+novel_num = 5
 input_size = 112
 nclass = 200
 
@@ -42,18 +42,18 @@ triplet_margin = 1
 pretrained = True
 eval_split = 'testing'
 train_frame = 32
-no_novel = False
 dropout = 0.5
 temporal_stride = 1
 clip_sec = 6
 metric_feat_dim = 512
 
-logger.auto_set_dir()
+
 
 def parse():
     print('parsing arguments')
     parser = argparse.ArgumentParser(description='VR')
     parser.add_argument('--method', default="baseline", choices=['baseline', 'va', 'vasa'], type=str)
+    parser.add_argument('--class_split', default="100_20_80", choices=['100_20_80', '120_20_60', '80_20_100'], type=str)
     parser.add_argument('--evaluate', dest='evaluate', action='store_true', help='evaluate on validation sets')
     # Model parameters
     parser.add_argument('--input_size', default=input_size, type=int)
@@ -83,12 +83,11 @@ def parse():
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
     parser.add_argument('--wd', default=1e-5, type=float, help='weight decay (default: 1e-4)')
     parser.add_argument('--test_load', type=str)
-    parser.add_argument('--novel_img_num', default=novel_img_num, type=int)
+    parser.add_argument('--novel_num', default=novel_num, type=int)
     parser.add_argument('--triplet_margin', default=triplet_margin, type=float)
     parser.add_argument('--eval_split', default=eval_split, type=str)
     parser.add_argument('--train_frame', default=train_frame, type=int)
     parser.add_argument('--test_frame_num', default=train_frame, type=int)
-    parser.add_argument('--no_novel', default=no_novel, action='store_true')
     parser.add_argument('--temporal_stride', default=temporal_stride, type=int)
     parser.add_argument('--clip_sec', default=clip_sec, type=int)
     parser.add_argument('--metric_feat_dim', default=metric_feat_dim, type=int)
@@ -103,6 +102,8 @@ def parse():
 
     args.pretrained = pretrained
 
+    logger.set_logger_dir(
+        "train_log/{}_{}_novel{}".format(os.path.basename(__file__).replace(".py", ""), args.method, args.novel_num))
     return args
 
 
