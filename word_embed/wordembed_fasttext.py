@@ -46,7 +46,7 @@ def wrap_sentence(tokens):
     tmp = tmp/(effective_token+1e-10)
     return tmp
 
-with open("wordembed_fasttext_d300.json","w") as f:#KeyError: "word 'mooping' not in vocabulary"
+with open("wordembed_fasttext_d300.json", "w") as f:#KeyError: "word 'mooping' not in vocabulary"
     _d = dict()
     for label in activitynet_label_list:
         tokens = label.split()

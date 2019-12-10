@@ -5,7 +5,7 @@ import numpy as np
 
 activitynet_label_list = [line.strip() for line in open('kinetics700/kinetics700_label.txt',"r").readlines()]
 elmo = ElmoEmbedder()
-with open("wordembed_kinetics700_elmo.json","w") as f:
+with open("wordembed_kinetics700_elmo.json", "w") as f:
     _d = dict()
     for label in activitynet_label_list:
         label = label.lower()

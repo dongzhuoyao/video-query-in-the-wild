@@ -4,8 +4,7 @@ import json
 import numpy as np
 
 import gensim.downloader as api
-word_vectors = api.load("word2vec-google-news-300")
-
+word_vectors = api.load("glove-twitter-200")
 def wrap_sentence(tokens):
     for _,t in enumerate(tokens):
         tokens[_] = t.lower()
@@ -30,18 +29,9 @@ def wrap_sentence(tokens):
         tokens = change(tokens,'plataform','platform')
     if 'blow-drying' in tokens:
         tokens =['blow', 'drying', 'hair']
-    if 'ping-pong' in tokens:
-        tokens = ['table','tennis']
-    if 'a' in tokens:
-        tokens.remove('a')
-    if 'and' in tokens:
-        tokens.remove('and')
     if 'rock-paper-scissors' in tokens:
         tokens = ['rock', 'paper', 'scissors']
-    if 'rubik' in tokens:
-        tokens = ['playing','combination','puzzle']
-    if 'tug' in tokens:
-        tokens = ['rope','pulling']
+
 
     for t in tokens:
         t = t.lower()
@@ -56,7 +46,7 @@ def wrap_sentence(tokens):
     tmp = tmp/(effective_token+1e-10)
     return tmp
 
-with open("wordembed_word2vec_d300.json","w") as f:#"word 'a' not in vocabulary"
+with open("wordembed_glove_d200.json", "w") as f:#KeyError: "word 'mooping' not in vocabulary"
     _d = dict()
     for label in activitynet_label_list:
         tokens = label.split()

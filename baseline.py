@@ -5,7 +5,8 @@ import numpy as np
 from bdb import BdbQuit
 import traceback
 import sys
-import pytorchgo_logger as logger
+#import pytorchgo_logger as logger
+from pytorchgo.utils import logger
 from pytorch_util import model_summary, optimizer_summary, set_gpu
 import cv2
 import torch.nn as nn
@@ -51,9 +52,9 @@ logger.auto_set_dir()
 
 def parse():
     print('parsing arguments')
-    parser = argparse.ArgumentParser(description='CLLL')
-    parser.add_argument('--method', default="baseline", choices=['baselne', 'sa', 'sava'], type=str)
-    parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true', help='evaluate on validation sets')
+    parser = argparse.ArgumentParser(description='VR')
+    parser.add_argument('--method', default="baseline", choices=['baseline', 'va', 'vasa'], type=str)
+    parser.add_argument('--evaluate', dest='evaluate', action='store_true', help='evaluate on validation sets')
     # Model parameters
     parser.add_argument('--input_size', default=input_size, type=int)
     parser.add_argument('--dropout', default=dropout, type=float, help='[0-1], 0 = leave defaults')
@@ -61,6 +62,7 @@ def parse():
     parser.add_argument('--pretrained_weights', default='')
     parser.add_argument('--nclass', default=nclass, type=int)
     parser.add_argument('--features', default='fc', help='conv1;layer1;layer2;layer3;layer4;fc')
+    parser.add_argument('--semantic_json', default="word_embed/wordembed_elmo_d1024.json", type=str)
 
     # System parameters
     parser.add_argument('-j', '--workers', default=8, type=int, help='number of data loading workers (default: 4)')
@@ -69,17 +71,17 @@ def parse():
     parser.add_argument('--query_num', default=1, type=int)
 
     # Training parameters
+    parser.add_argument('--gpu', default='0')
+    parser.add_argument('--debug', action='store_true')
     parser.add_argument('--optimizer', default='adam', type=str, help='sgd | adam')
     parser.add_argument('--epochs', default=epochs, type=int, help='number of total epochs to run')
     parser.add_argument('--batch_size', default=batch_size, type=int, help='mini-batch size (default: 256)')
     parser.add_argument('--test_batch_size', default=test_batch_size, type=int, help='mini-batch size (default: 256)')
-    parser.add_argument('--lr', '--learning_rate', default=init_lr, type=float, help='initial learning rate')
+    parser.add_argument('--lr', default=init_lr, type=float, help='initial learning rate')
     parser.add_argument('--lr_decay_rate', default=lr_decay_rate, type=str)
     parser.add_argument('--accum_grad', default=1, type=int)
     parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
-    parser.add_argument('--weight_decay', '--wd', default=1e-5, type=float, help='weight decay (default: 1e-4)')
-    parser.add_argument('--debug', action='store_true')
-    parser.add_argument('--gpu', default='0')
+    parser.add_argument('--wd', default=1e-5, type=float, help='weight decay (default: 1e-4)')
     parser.add_argument('--test_load', type=str)
     parser.add_argument('--novel_img_num', default=novel_img_num, type=int)
     parser.add_argument('--triplet_margin', default=triplet_margin, type=float)
@@ -87,13 +89,14 @@ def parse():
     parser.add_argument('--train_frame', default=train_frame, type=int)
     parser.add_argument('--test_frame_num', default=train_frame, type=int)
     parser.add_argument('--no_novel', default=no_novel, action='store_true')
-    parser.add_argument('--eval_moment', action='store_true')
-    parser.add_argument('--eval_clip', action='store_true')
     parser.add_argument('--temporal_stride', default=temporal_stride, type=int)
     parser.add_argument('--clip_sec', default=clip_sec, type=int)
     parser.add_argument('--metric_feat_dim', default=metric_feat_dim, type=int)
     parser.add_argument('--read_cache_feat', default=False, action='store_true')
     parser.add_argument('--memory_leak_debug', default=False, action='store_true')
+
+    parser.add_argument('--eval_moment', action='store_true')
+    parser.add_argument('--eval_clip', action='store_true')
     parser.add_argument('--eval_all', action='store_true')
 
     args = parser.parse_args()
@@ -118,8 +121,14 @@ def adjust_learning_rate(startlr, decay_rate, optimizer, epoch):
 
 
 def get_model(args):
-    from resnet18_3d_f2f import ResNet3D, BasicBlock
-    model = ResNet3D(BasicBlock, [2, 2, 2, 2], num_classes=args.nclass)  # 50
+    if args.method == "baseline":
+        from resnet18_3d_f2f import ResNet3D, BasicBlock
+    elif args.method == "va":
+        from resnet18_va import ResNet3D, BasicBlock
+    elif args.method == "vasa":
+        from resnet18_vasa import ResNet3D, BasicBlock
+    else:raise
+    model = ResNet3D(args, BasicBlock, [2, 2, 2, 2], num_classes=args.nclass)  # 50
     if args.pretrained:
         print("loading pretrained weight.!")
         from torchvision.models.resnet import resnet18
@@ -134,7 +143,15 @@ def do_eval(args, model):
     model.eval()
 
     def feat_func(input):
-        logits, metric_feat = model(input)  # [B,C,T]
+        if args.method == "baseline":
+            metric_feat = model(input)  # [B,C,T]
+        elif args.method == "va":
+            metric_feat = model(input,None,None)  # [B,C,T]
+        elif args.method == "vasa":
+            metric_feat = model(input,None,None,None)  # [B,C,T]
+        else:
+            raise
+
         metric_feat = F.normalize(metric_feat, p=2, dim=1)#normalize on C
         return metric_feat.data.cpu().numpy()
 
@@ -157,13 +174,13 @@ def do_eval(args, model):
     model.train()
     return score_dict
 
-
-def train(loader, model, optimizer, epoch, args):
+def train_vasa(loader, model, optimizer, epoch, args):
     timer = Timer()
     data_time = AverageMeter()
-    losses = AverageMeter()
-    ce_losses = AverageMeter()
-    # switch to train mode
+    loss_meter = AverageMeter()
+    ce_loss_meter = AverageMeter()
+    reg_loss_meter = AverageMeter()
+    word_loss_meter = AverageMeter()
     cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
     model.train()
     optimizer.zero_grad()
@@ -178,13 +195,111 @@ def train(loader, model, optimizer, epoch, args):
             target.extend(meta[_]['labels'])
         target = torch.from_numpy(np.array(target))
         input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
-        output, metric_feat = model(input)
+        metric_feat, cls_logit, reg_logit, word_logit = model(input,target,temperature=0.1)
+        ce_loss = ce_loss_criterion(cls_logit.cuda(), target.long().cuda())
+        reg_loss = ce_loss_criterion(reg_logit.cuda(), target.long().cuda())
+        word_loss = ce_loss_criterion(word_logit.cuda(), target.long().cuda())
+        loss = ce_loss + reg_loss + word_loss
+
+        loss.backward()
+        loss_meter.update(loss.item())
+        ce_loss_meter.update(ce_loss.item())
+        reg_loss_meter.update(reg_loss.item())
+        word_loss_meter.update(word_loss.item())
+        if i % args.accum_grad == args.accum_grad - 1:
+            optimizer.step()
+            optimizer.zero_grad()
+
+        if i % args.print_freq == 0 and i > 0:
+            logger.info('[{0}][{1}/{2}({3})]\t'
+                        'Dataload_Time={data_time.avg:.3f}\t'
+                        'Loss={loss.avg:.4f}\t'
+                        'CELoss={ce_loss.avg:.4f}\t'
+                        'RegLoss={reg_loss.avg:.4f}\t'
+                        'WordLoss={word_loss.avg:.4f}\t'
+                        'LR={cur_lr:.7f}\t'
+                        'bestAP={ap:.3f}'.format(
+                epoch, i, len(loader), len(loader),
+                data_time=data_time, loss=loss_meter, ce_loss=ce_loss_meter,
+                reg_loss=reg_loss_meter,word_loss=word_loss_meter,
+                ap=args.best_score,
+                cur_lr=cur_lr))
+            loss_meter.reset()
+            ce_loss_meter.reset()
+
+def train_va(loader, model, optimizer, epoch, args):
+    timer = Timer()
+    data_time = AverageMeter()
+    loss_meter = AverageMeter()
+    ce_loss_meter = AverageMeter()
+    reg_loss_meter = AverageMeter()
+    cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
+    model.train()
+    optimizer.zero_grad()
+    ce_loss_criterion = nn.CrossEntropyLoss()
+    for i, (input, meta) in tqdm(enumerate(loader), desc='Train Epoch'):
+        if args.debug and i>=debug_short_train_num: break
+        data_time.update(timer.thetime() - timer.end)
+
+        _batch_size = len(meta)
+        target = []
+        for _ in range(_batch_size):
+            target.extend(meta[_]['labels'])
+        target = torch.from_numpy(np.array(target))
+        input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
+        metric_feat, cls_logits, reg_logits = model(input,target,temperature=0.1)
+        ce_loss = ce_loss_criterion(cls_logits.cuda(), target.long().cuda())
+        register_loss = ce_loss_criterion(reg_logits.cuda(), target.long().cuda())
+        loss = ce_loss + register_loss
+
+        loss.backward()
+        loss_meter.update(loss.item())
+        ce_loss_meter.update(ce_loss.item())
+        reg_loss_meter.update(register_loss.item())
+        if i % args.accum_grad == args.accum_grad - 1:
+            optimizer.step()
+            optimizer.zero_grad()
+
+        if i % args.print_freq == 0 and i > 0:
+            logger.info('[{0}][{1}/{2}({3})]\t'
+                        'Dataload_Time={data_time.avg:.3f}\t'
+                        'Loss={loss.avg:.4f}\t'
+                        'CELoss={ce_loss.avg:.4f}\t'
+                         'RegLoss={reg_loss.avg:.4f}\t'
+                        'LR={cur_lr:.7f}\t'
+                        'bestAP={ap:.3f}'.format(
+                epoch, i, len(loader), len(loader),
+                data_time=data_time, loss=loss_meter, ce_loss=ce_loss_meter, reg_loss=reg_loss_meter, ap=args.best_score,
+                cur_lr=cur_lr))
+            loss_meter.reset()
+            ce_loss_meter.reset()
+
+def train(loader, model, optimizer, epoch, args):
+    timer = Timer()
+    data_time = AverageMeter()
+    loss_meter = AverageMeter()
+    ce_loss_meter = AverageMeter()
+    cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
+    model.train()
+    optimizer.zero_grad()
+    ce_loss_criterion = nn.CrossEntropyLoss()
+    for i, (input, meta) in tqdm(enumerate(loader), desc='Train Epoch'):
+        if args.debug and i>=debug_short_train_num: break
+        data_time.update(timer.thetime() - timer.end)
+
+        _batch_size = len(meta)
+        target = []
+        for _ in range(_batch_size):
+            target.extend(meta[_]['labels'])
+        target = torch.from_numpy(np.array(target))
+        input = input.view(_batch_size * 3, input.shape[2], input.shape[3], input.shape[4], input.shape[5])
+        metric_feat, output = model(input)
         ce_loss = ce_loss_criterion(output.cuda(), target.long().cuda())
         loss = ce_loss
 
         loss.backward()
-        losses.update(loss.item())
-        ce_losses.update(ce_loss.item())
+        loss_meter.update(loss.item())
+        ce_loss_meter.update(ce_loss.item())
         if i % args.accum_grad == args.accum_grad - 1:
             optimizer.step()
             optimizer.zero_grad()
@@ -197,10 +312,10 @@ def train(loader, model, optimizer, epoch, args):
                         'LR={cur_lr:.7f}\t'
                         'bestAP={ap:.3f}'.format(
                 epoch, i, len(loader), len(loader),
-                data_time=data_time, loss=losses, ce_loss=ce_losses, ap=args.best_score,
+                data_time=data_time, loss=loss_meter, ce_loss=ce_loss_meter, ap=args.best_score,
                 cur_lr=cur_lr))
-            losses.reset()
-            ce_losses.reset()
+            loss_meter.reset()
+            ce_loss_meter.reset()
 
 
 def main():
@@ -209,12 +324,12 @@ def main():
     args.best_score = 0
     args.best_result_dict = {}
 
+    from dataloader_baseline import get_my_dataset
+    train_loader = get_my_dataset(args)
+    args.semantic_mem = train_loader.dataset.semantic_mem
     seed(args.manual_seed)
     model = get_model(args)
-    # import models;args.arch="resnet18_3d_f2f";args.wrapper="default_wrapper";model = models.get.get_model(args)
-    from dataloader_baseline import get_my_dataset;
-    train_loader = get_my_dataset(args)
-    # from datasets.get import get_dataset;args.dataset = "arv120_20_60_triplet_clsrank_fs";train_loader = get_dataset(args)
+
 
     if args.evaluate:
         logger.info(vars(args))
@@ -234,10 +349,10 @@ def main():
     if args.optimizer == 'sgd':
         optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                     momentum=args.momentum,
-                                    weight_decay=args.weight_decay)
+                                    weight_decay=args.wd)
     elif args.optimizer == 'adam':
         optimizer = torch.optim.Adam(model.parameters(), args.lr,
-                                     weight_decay=args.weight_decay)
+                                     weight_decay=args.wd)
     else:
         assert False, "invalid optimizer"
 
@@ -247,7 +362,13 @@ def main():
     logger.info(vars(args))
 
     for epoch in range(args.epochs):
-        train(train_loader, model, optimizer, epoch, args)
+        if args.method == "baseline":
+            train(train_loader, model, optimizer, epoch, args)
+        elif  args.method == "va":
+            train_va(train_loader, model, optimizer, epoch, args)
+        elif args.method == "vasa":
+            train_vasa(train_loader, model, optimizer, epoch, args)
+        else:raise
         if (epoch % eval_per == 0 and epoch > 0) or epoch == args.epochs - 1:
             score_dict = do_eval(args=args, model=model)
 

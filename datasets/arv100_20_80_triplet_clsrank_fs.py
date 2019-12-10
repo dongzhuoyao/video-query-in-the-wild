@@ -93,7 +93,6 @@ class arv1002080tripletclsrankfs(data.Dataset):
             tmp = sklearn_preprocessing.normalize(np.array(self.label2word_embed[label_name]).reshape(1,-1))#L2 Norm!!!!!!!!!!!
             self.semantic_mem[id,:] = tmp
             assert tmp.max()<=1 and tmp.min()>=-1
-
         self.semantic_mem = torch.from_numpy(self.semantic_mem).float()
 
 

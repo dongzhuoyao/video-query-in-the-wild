@@ -4,7 +4,7 @@ from allennlp.commands.elmo import ElmoEmbedder
 import numpy as np
 
 elmo = ElmoEmbedder()
-with open("wordembed_elmo.json","w") as f:
+with open("wordembed_elmo_d1024.json", "w") as f:
     _d = dict()
     for label in activitynet_label_list:
         #label = label.lower()

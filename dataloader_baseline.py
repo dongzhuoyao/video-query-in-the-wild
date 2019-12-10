@@ -6,7 +6,8 @@ import datasets.video_transforms as videotransforms
 from tqdm import tqdm
 import random, json, sklearn
 from data_generate.activitynet_label import arv_train_label, arv_test_label, arv_val_label, activitynet_label_list
-import pytorchgo_logger as logger
+#import pytorchgo_logger as logger
+from pytorchgo.utils import logger
 from sklearn.metrics import average_precision_score
 import faiss
 from scipy import stats
@@ -76,19 +77,23 @@ class VRActivityNet(data.Dataset):
         self.cls2int = {label: i for i, label in enumerate(self.cur_label_list)}
         assert len(list(self.cls2int.keys())) == self.args.nclass
 
-
-        # read word embedding
-        self.label2word_embed = json.load(open("wordembed_elmo.json"))
-        self.semantic_mem = np.zeros((self.args.nclass, 1024),dtype=np.float32)
+        if "d300" in self.args.semantic_json:
+            self.semantic_mem = np.zeros((self.args.nclass, 300), dtype=np.float32)
+        elif "d200" in self.args.semantic_json:
+            self.semantic_mem = np.zeros((self.args.nclass, 200), dtype=np.float32)
+        elif "d1024" in self.args.semantic_json:
+            self.semantic_mem = np.zeros((self.args.nclass, 1024), dtype=np.float32)
+        else:
+            raise
+        self.label2word_embed = json.load(open(self.args.semantic_json))
         from sklearn import preprocessing as sklearn_preprocessing
         for label_name in self.label2word_embed.keys():
             id = self.cls2int[label_name]
-            tmp = sklearn_preprocessing.normalize(np.array(self.label2word_embed[label_name]).reshape(1,-1))#L2 Norm!!!!!!!!!!!
-            self.semantic_mem[id,:] = tmp
-            assert tmp.max()<=1 and tmp.min()>=-1
-
+            tmp = sklearn_preprocessing.normalize(
+                np.array(self.label2word_embed[label_name]).reshape(1, -1))  # L2 Norm!!!!!!!!!!!
+            self.semantic_mem[id, :] = tmp
+            assert tmp.max() <= 1 and tmp.min() >= -1
         self.semantic_mem = torch.from_numpy(self.semantic_mem).float()
-
 
 
     def __getitem__(self, index):
