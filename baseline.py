@@ -9,6 +9,7 @@ from pytorchgo.utils import logger
 from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary, set_gpu
 import cv2
 import torch.nn as nn
+import torch.nn.functional as F
 
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
@@ -72,7 +73,7 @@ def parse():
     # Training parameters
     parser.add_argument('--optimizer', default='adam', type=str, help='sgd | adam')
     parser.add_argument('--epochs', default=epochs, type=int, help='number of total epochs to run')
-    parser.add_argument('-b', '--batch_size', default=batch_size, type=int, help='mini-batch size (default: 256)')
+    parser.add_argument('--batch_size', default=batch_size, type=int, help='mini-batch size (default: 256)')
     parser.add_argument('--test_batch_size', default=test_batch_size, type=int, help='mini-batch size (default: 256)')
     parser.add_argument('--lr', '--learning_rate', default=init_lr, type=float, help='initial learning rate')
     parser.add_argument('--lr_decay_rate', default=lr_decay_rate, type=str)
@@ -135,8 +136,8 @@ def do_eval(args, model):
     model.eval()
 
     def feat_func(input):
-        logits, metric_feat = model(input)  # [B,C]
-        # metric_feat = F.normalize(metric_feat, p=2, dim=1),TODO
+        logits, metric_feat = model(input)  # [B,C,T]
+        metric_feat = F.normalize(metric_feat, p=2, dim=1)#normalize on C
         return metric_feat.data.cpu().numpy()
 
     if args.eval_clip:

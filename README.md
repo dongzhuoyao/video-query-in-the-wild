@@ -4,7 +4,7 @@
 ## TODO
 
 
-- Evaluation metric tidy up
+- ~~Evaluation metric tidy up~~
 - normalize uniformly in invoked func.
 - decouple with pytorchgo
 - word embedding into sub_directory, set word embedding on the fly in an elegant way

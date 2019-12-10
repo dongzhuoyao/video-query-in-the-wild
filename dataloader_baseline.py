@@ -493,10 +493,9 @@ class ARV_Retrieval_Clip():
                     feat = self.feat_extract_func(img)
 
                 assert len(data_batch) == feat.shape[0]
-                for i in range(feat.shape[0]):  # iter on batch size,[B,C,T]
-                    data_batch[i]['feat'] = sklearn_preprocessing.normalize(
-                        np.mean(feat[i].reshape(feat[i].shape[0], -1), axis=-1).reshape(1,
-                                                                                        -1))  # np.transpose(feat[i],(1,2,3,0))#set value
+                tpooled_feat = np.mean(feat[i], axis=-1)
+                for i in range(len(data_batch)):
+                    data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
             self.query_list = cur_list
 
@@ -527,7 +526,7 @@ class ARV_Retrieval_Clip():
                 _feats = np.concatenate(feats_list, axis=0)
                 assert _feats.shape[0] == activitynet_frame_num // self.temporal_stride, \
                     "{} not equal to {}".format(_feats.shape[0], activitynet_frame_num // self.temporal_stride)
-                self.gallery_list[proceeded_id]['feat'] = sklearn_preprocessing.normalize(_feats, axis=1)
+                self.gallery_list[proceeded_id]['feat'] = _feats#[T,C]
 
             self.gallery_list = [g for g in self.gallery_list if 'feat' in g]  # useful when debugging
 
@@ -717,10 +716,9 @@ class ARV_Retrieval_Moment():
                     img = _pre_process(data_batch, self.input_size, self.test_frame_num)
                     feat = self.feat_extract_func(img)
                 assert len(data_batch) == feat.shape[0]
-                for i in range(feat.shape[0]):  # robust indexing
-                    data_batch[i]['feat'] = sklearn_preprocessing.normalize(
-                        np.mean(feat[i].reshape(feat[i].shape[0], -1), axis=-1).reshape(1,
-                                                                                        -1))  # np.transpose(feat[i],(1,2,3,0))#set value
+                tpooled_feat = np.mean(feat[i], axis=-1)
+                for i in range(len(data_batch)):
+                    data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
             self.query_list = cur_list
 
@@ -749,7 +747,7 @@ class ARV_Retrieval_Moment():
                     feats_list.append(_feats)
                 _feats = np.concatenate(feats_list, axis=0)
                 assert _feats.shape[0] == activitynet_frame_num // self.temporal_stride
-                self.gallery_list[proceeded_id]['feat'] = sklearn_preprocessing.normalize(_feats, axis=1)
+                self.gallery_list[proceeded_id]['feat'] = _feats#[T,C]
 
             def garner_feat(_g, clip_length_sec=5, max_clip_per_moment=26):
                 feat_length = _g['feat'].shape[0]
@@ -996,9 +994,9 @@ class ARV_Retrieval():
                     feat = self.feat_extract_func(img)
                 else:
                     feat = np.random.rand(len(data_batch), self.feat_dim).astype(np.float32)
+                tpooled_feat = np.mean(feat[i], axis=-1)
                 for i in range(len(data_batch)):
-                    data_batch[i]['feat'] = sklearn_preprocessing.normalize(
-                        np.mean(feat[i].reshape(feat[i].shape[0], -1), axis=-1).reshape(1, -1))  # set value
+                    data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
 
             self.query_list = []
