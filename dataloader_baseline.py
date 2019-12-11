@@ -491,7 +491,11 @@ class ARV_Retrieval_Clip():
                 for i in range(len(data_batch)):
                     data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
-            self.query_list = cur_list
+
+            self.query_list = []
+            for q in cur_list:
+                if  q['label'] in self.possible_classes:
+                    self.query_list.append(q)
 
             for proceeded_id, _g in tqdm(enumerate(self.gallery_list), total=len(self.gallery_list),
                                          desc="eval_clips, extracting gallery feat"):
@@ -711,7 +715,11 @@ class ARV_Retrieval_Moment():
                 for i in range(len(data_batch)):
                     data_batch[i]['feat'] = tpooled_feat[i]
                 cur_list.extend(data_batch)
-            self.query_list = cur_list
+
+            self.query_list = []
+            for q in cur_list:
+                if q['label'] in self.possible_classes:
+                    self.query_list.append(q)
 
             ### extract feature for gallery video #####
             for proceeded_id, _g in tqdm(enumerate(self.gallery_list), total=len(self.gallery_list),
@@ -933,18 +941,27 @@ class ARV_Retrieval():
     def __init__(self, args, feat_extract_func):
         self.args = args
         self.feat_extract_func = feat_extract_func
-        self.split = args.eval_split
+        self.eval_split = args.eval_split# no eval_split for clip, moment retrieval, because they are and only are used for testing.
         self.test_batch_size = args.test_batch_size
         self.input_size = args.input_size
         self.test_frame_num = args.test_frame_num
         self.feat_dim = args.metric_feat_dim
         self.load_data()
-        logger.info("loading {} data: {}".format(self.split, len(self.data_list[self.split])))
+        if self.eval_split == "validation":
+            self.possible_classes = dataset_config[self.args.meta_split]['arv_train_label'] + \
+                                    dataset_config[self.args.meta_split]['arv_val_label']
+        elif self.eval_split == "testing":
+            self.possible_classes = dataset_config[self.args.meta_split]['arv_train_label'] + \
+                                    dataset_config[self.args.meta_split]['arv_test_label']
+        else:
+            logger.warning("evaluation on training set!")
+
+        logger.info("loading {} data: {}".format(self.eval_split, len(self.data_list[self.eval_split])))
         logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
-        if self.split == 'training':#evaluate on training data for checking
+        if self.eval_split == 'training':#evaluate on training data for checking
             raise
             self.data_dict = json.load(open(dataset_config[self.args.meta_split]['json_path']))
             self.data_list = dict(training=list(), testing=list(), validation=list())
@@ -957,8 +974,8 @@ class ARV_Retrieval():
 
         self.data_dict = json.load(open(dataset_config[self.args.meta_split]['json_path']))
         self.data_list = dict(training=list(), testing=list(), validation=list())
-        for k, v in self.data_dict[self.split].items():
-            self.data_list[self.split].extend(v)
+        for k, v in self.data_dict[self.eval_split].items():
+            self.data_list[self.eval_split].extend(v)
 
     def extract_item_feature(self):
         import pickle
@@ -971,9 +988,9 @@ class ARV_Retrieval():
             logger.warning("load cache_feat from {}".format(cache_path))
         else:
             cur_list = list()
-            chunk_list = list(chunks(self.data_list[self.split], self.test_batch_size))
+            chunk_list = list(chunks(self.data_list[self.eval_split], self.test_batch_size))
             for idxx, data_batch in tqdm(enumerate(chunk_list), total=len(chunk_list),
-                                         desc="{}: extracting feat, batch size:{}x{}".format(self.split,
+                                         desc="{}: extracting feat, batch size:{}x{}".format(self.eval_split,
                                                                                              self.test_batch_size,
                                                                                              len(chunk_list))):
                 if self.args.debug and idxx > 5: break
@@ -990,7 +1007,7 @@ class ARV_Retrieval():
 
             self.query_list = []
             for q in cur_list:
-                if q['retrieval_type'] != RETRIEVAL_TYPE_NOISE:
+                if  q['label'] in self.possible_classes:
                     self.query_list.append(q)
 
             self.gallery_list = cur_list
@@ -1020,7 +1037,7 @@ class ARV_Retrieval():
         self.class_map_evaluation = evaluation_metric(self.args, self.query_list)
 
         for _, queries in tqdm(enumerate(self.query_list), total=len(self.query_list),
-                               desc="{}: ranking".format(self.split)):
+                               desc="{}: ranking".format(self.eval_split)):
             query = queries[0]
             ignore_videoid_list = [q['video_id'] for q in queries]
             assert query['retrieval_type'] != RETRIEVAL_TYPE_NOISE
