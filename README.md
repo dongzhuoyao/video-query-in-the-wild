@@ -17,8 +17,8 @@
 - novelty gain check(long time task)
 - extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
 - NMS in Moment Retrieval
+- ~~visual bank implementation check~~
 - "noisy"->"distractor"
-- visual bank implementation check
 - should remove background noise for activity.
 - close dataset hacking flag
 - consider more baseline in https://arxiv.org/pdf/1912.04486.pdf
