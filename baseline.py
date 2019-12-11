@@ -389,7 +389,7 @@ def main():
 
     weigth_path = os.path.join("train_log", os.path.basename(__file__).replace(".py", ""), "best.pth.tar")
     saved_dict = torch.load(weigth_path)
-    logger.warning("loading weight {}".format(weigth_path))
+    logger.warning("loading weight {}, best validation result={}".format(weigth_path, saved_dict['score']))
     model.load_state_dict(saved_dict['state_dict'], strict=True)
     args.eval_split = 'testing'
     logger.info(vars(args))

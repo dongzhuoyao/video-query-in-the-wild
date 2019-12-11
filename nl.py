@@ -53,13 +53,13 @@ class _NonLocalBlockND(nn.Module):
                         kernel_size=1, stride=1, padding=0),
                 bn(self.in_channels)
             )
-            nn.init.constant(self.W[1].weight, 0)
-            nn.init.constant(self.W[1].bias, 0)
+            nn.init.constant_(self.W[1].weight, 0)
+            nn.init.constant_(self.W[1].bias, 0)
         else:
             self.W = conv_nd(in_channels=self.inter_channels, out_channels=self.in_channels,
                              kernel_size=1, stride=1, padding=0)
-            nn.init.constant(self.W.weight, 0)
-            nn.init.constant(self.W.bias, 0)
+            nn.init.constant_(self.W.weight, 0)
+            nn.init.constant_(self.W.bias, 0)
 
         self.theta = conv_nd(in_channels=self.in_channels, out_channels=self.inter_channels,
                              kernel_size=1, stride=1, padding=0)

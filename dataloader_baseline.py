@@ -4,7 +4,7 @@ import torchvision.transforms as transforms
 import numpy as np
 import datasets.video_transforms as videotransforms
 from tqdm import tqdm
-import random, json, sklearn
+import random, json
 from data_generate.activitynet_label import arv_train_label, arv_test_label, arv_val_label, activitynet_label_list
 import pytorchgo_logger as logger
 from sklearn.metrics import average_precision_score
