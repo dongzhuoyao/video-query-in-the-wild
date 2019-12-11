@@ -5,7 +5,7 @@ New models can be defined by adding scripts under models/
 from importlib import import_module
 from models.utils import set_distributed_backend, replace_last_layer, generic_load, case_getattr
 import torch.nn
-from pytorchgo.utils import logger
+from pytorchgo_logger as logger
 
 def get_model(args):
     model = generic_load(args.arch, args.pretrained, args.pretrained_weights, args)

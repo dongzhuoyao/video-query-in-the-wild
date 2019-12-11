@@ -1,13 +1,15 @@
-from models.get import get_model
 from misc_utils.utils import seed
 import pdb
 import numpy as np
 from bdb import BdbQuit
 import traceback
 import sys
-#import pytorchgo_logger as logger
-from pytorchgo.utils import logger
+import pytorchgo_logger as logger
 from pytorch_util import model_summary, optimizer_summary, set_gpu
+
+#from pytorchgo_logger as logger
+#from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary, set_gpu
+
 import cv2
 import torch.nn as nn
 import torch.nn.functional as F
@@ -153,7 +155,6 @@ def do_eval(args, model):
         else:
             raise
         metric_feat = F.normalize(metric_feat, p=2, dim=1)#normalize on C
-        import ipdb;ipdb.set_trace()
         return metric_feat.data.cpu().numpy()
 
     if args.eval_clip:

@@ -8,7 +8,7 @@ from bdb import BdbQuit
 import traceback
 from sklearn import metrics as sklearn_metrics
 import sys, os
-from pytorchgo.utils import logger
+from pytorchgo_logger as logger
 from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary
 
 from pytorchgo.utils.pytorch_utils import set_gpu
