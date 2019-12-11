@@ -63,7 +63,7 @@ class ResNet3D(nn.Module):
         self.dropout = nn.Dropout(.5)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         from nl import NONLocalBlock1D
-        self.cls_mem = nn.Parameter(torch.zeros(num_classes, 512 * block.expansion), requires_grad=False)
+        self.visual_memory = nn.Parameter(torch.zeros(num_classes, 512 * block.expansion), requires_grad=False)
         self.cls_nl = NONLocalBlock1D(in_channels=512 * block.expansion, inter_channels=512 * block.expansion,
                                       sub_sample=False, bn_layer=True)
         self.rank_nl = NONLocalBlock1D(in_channels=512 * block.expansion, inter_channels=512 * block.expansion,
@@ -119,18 +119,18 @@ class ResNet3D(nn.Module):
             batch_size = normalized_cls_embed.size(0)
             reg_logits = torch.ones([batch_size, self.num_classes]).cuda()
             for b in range(batch_size):
-                tmp = -torch.norm(normalized_cls_embed[b] - self.cls_mem, p=2, dim=1) / temperature
+                tmp = -torch.norm(normalized_cls_embed[b] - self.visual_memory, p=2, dim=1) / temperature
                 reg_logits[b] = tmp
 
             with torch.no_grad():
                 for ii, _y in enumerate(target):
-                    old = self.cls_mem.data[_y]
+                    old = self.visual_memory.data[_y]
                     tmp = mv * old + (1 - mv) * normalized_cls_embed[ii]
-                    self.cls_mem.data[_y] = F.normalize(tmp, p=2,
-                                                        dim=0)  # https://discuss.pytorch.org/t/leaf-variable-was-used-in-an-inplace-operation/308/4
+                    self.visual_memory.data[_y] = F.normalize(tmp, p=2,
+                                                              dim=0)  # https://discuss.pytorch.org/t/leaf-variable-was-used-in-an-inplace-operation/308/4
 
             logits = self.fc(self.dropout(cls_embed))  # torch.Size([8, 200, 15, 1, 1])
-            nled_logits = self.nled_fc(self.cls_nl(x_support=cls_embed, query=self.cls_mem))
+            nled_logits = self.nled_fc(self.cls_nl(x_support=cls_embed, query=self.visual_memory))
             return rank_embed, nled_logits, reg_logits
         else:
             return rank_embed

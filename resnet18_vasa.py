@@ -80,7 +80,6 @@ class ResNet3D(nn.Module):
         self.dropout = nn.Dropout(.5)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
         from nl import NONLocalBlock1D
-        self.cls_mem = nn.Parameter(torch.zeros(num_classes, 512 * block.expansion), requires_grad=False)
         self.cls_nl = NONLocalBlock1D(in_channels=512 * block.expansion, inter_channels=512 * block.expansion,
                                       sub_sample=False, bn_layer=True)
         self.rank_nl = NONLocalBlock1D(in_channels=512 * block.expansion, inter_channels=512 * block.expansion,
@@ -89,9 +88,9 @@ class ResNet3D(nn.Module):
         self.nled_fc = nn.Linear(512 * block.expansion, num_classes)
         self.num_classes = num_classes
 
-
-        self.semantic_mem = args.semantic_mem.cuda()
-        self.word_adaptor = SemanticAdaptor(semantic_dim=self.semantic_mem.shape[-1])
+        self.visual_memory = nn.Parameter(torch.zeros(num_classes, 512 * block.expansion), requires_grad=False)
+        self.semantic_memory = args.semantic_mem.cuda();self.semantic_memory.require_grad = False
+        self.word_adaptor = SemanticAdaptor(semantic_dim=self.semantic_memory.shape[-1])
 
         for m in self.modules():
             if isinstance(m, nn.Conv3d):
@@ -136,32 +135,30 @@ class ResNet3D(nn.Module):
 
         if self.training:
             normalized_cls_embed = F.normalize(cls_embed, p=2, dim=-1)
-            # embed#[B,512],[200, 512]->[B,200]
             batch_size = normalized_cls_embed.size(0)
             reg_logits = torch.ones([batch_size, self.num_classes]).cuda()
             for b in range(batch_size):
-                tmp = -torch.norm(normalized_cls_embed[b] - self.cls_mem, p=2, dim=1) / temperature
+                tmp = -torch.norm(normalized_cls_embed[b] - self.visual_memory, p=2, dim=1) / temperature
                 reg_logits[b] = tmp
 
             with torch.no_grad():
                 for ii, _y in enumerate(target):
-                    old = self.cls_mem.data[_y]
+                    old = self.visual_memory.data[_y]
                     tmp = mv * old + (1 - mv) * normalized_cls_embed[ii]
-                    self.cls_mem.data[_y] = F.normalize(tmp, p=2,
-                                                        dim=0)  # https://discuss.pytorch.org/t/leaf-variable-was-used-in-an-inplace-operation/308/4
+                    self.visual_memory.data[_y] = F.normalize(tmp, p=2,
+                                                              dim=0)  # https://discuss.pytorch.org/t/leaf-variable-was-used-in-an-inplace-operation/308/4
             #self.word_adaptor
             word_logits = torch.ones([batch_size, self.num_classes]).cuda()
             for b in range(batch_size):
                 word_embed_pred = self.word_adaptor(cls_embed[b])
                 # semantic_mem already normalized
-                word_logits[b] = -torch.norm(self.semantic_mem
+                word_logits[b] = -torch.norm(self.semantic_memory
                                    - F.normalize(word_embed_pred, p=2, dim=-1)
                                    , p=2,dim=1)/temperature #[B,1] /
 
             logits = self.fc(self.dropout(cls_embed))  # torch.Size([8, 200, 15, 1, 1])
-            nled_logits = self.nled_fc(self.cls_nl(x_support=cls_embed, query=self.cls_mem))
+            nled_logits = self.nled_fc(self.cls_nl(x_support=cls_embed, query=self.visual_memory))
             return rank_embed, nled_logits, reg_logits, word_logits
-
         else:
             return rank_embed
 
