@@ -10,8 +10,9 @@
 - ~~Flexible novelty gain~~
 - ~~word embedding into sub_directory, set word embedding on the fly in an elegant way~~
 - ~~Evaluation into dataloader,~~think about an elegant way
-- duplicate logger
+- ~~duplicate logger~~
 - Flexible evaluation, change class_split
+- seriously, eval_split: no hacking, real validation and testing subset utilization
 - extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
 - visual bank implementation check
 - Flexible dataloader for ranking baseline

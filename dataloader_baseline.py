@@ -5,7 +5,6 @@ import numpy as np
 import datasets.video_transforms as videotransforms
 from tqdm import tqdm
 import random, json
-from data_generate.activitynet_label import arv_train_label, arv_test_label, arv_val_label, activitynet_label_list
 import pytorchgo_logger as logger
 from sklearn.metrics import average_precision_score
 import faiss
@@ -17,7 +16,7 @@ R_at_N_tiou_thres = 0.5
 NOISE_LABEL = "noisy_activity"
 RETRIEVAL_TYPE_NOISE = "noise"
 
-from data_generate.activitynet_label_100_20_80  import arv_train_label,arv_test_label,arv_val_label,activitynet_label_list,json_path,longvideo_json_path
+from data_generate.activitynet_label_100_20_80  import arv_train_label,arv_test_label,arv_val_label, activitynet_label_list,json_path,moment_eval_json_path
 from dongzhuoyao_utils import fps,noisy_label,activtynet_fps3_path,read_video,read_activitynet
 
 
@@ -415,7 +414,7 @@ class evaluation_metric():
         logger.warning("(report metric)2-order class_specific_novel_map={}".format(o2_class_specific_novel_map))
         logger.warning("2-order class_specific_map={}".format(o2_class_specific_map))
         logger.warning(json_path)
-        logger.warning(longvideo_json_path)
+        logger.warning(moment_eval_json_path)
 
         # save confusion matrix related json.
         cm_dict = dict(
@@ -457,7 +456,7 @@ class ARV_Retrieval_Clip():
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
-        data_dict = json.load(open(longvideo_json_path))
+        data_dict = json.load(open(moment_eval_json_path))
         self.query_list = []
         for q in data_dict['query']:
             if q['retrieval_type'] == RETRIEVAL_TYPE_NOISE:
@@ -677,7 +676,7 @@ class ARV_Retrieval_Moment():
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
-        data_dict = json.load(open(longvideo_json_path))
+        data_dict = json.load(open(moment_eval_json_path))
         query = data_dict['query']
         self.query_list = []
         for q in query:

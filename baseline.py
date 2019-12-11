@@ -7,9 +7,6 @@ import sys
 import pytorchgo_logger as logger
 from pytorch_util import model_summary, optimizer_summary, set_gpu
 
-#from pytorchgo_logger as logger
-#from pytorchgo.utils.pytorch_utils import model_summary, optimizer_summary, set_gpu
-
 import cv2
 import torch.nn as nn
 import torch.nn.functional as F
