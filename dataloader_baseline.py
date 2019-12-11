@@ -22,7 +22,6 @@ from data_generate.activitynet_label_100_20_80  import arv_train_label,arv_test_
 from dongzhuoyao_utils import fps,noisy_label,activtynet_fps3_path,read_video,read_activitynet
 
 
-
 class VRActivityNet(data.Dataset):
     def __init__(self, args):
 
@@ -400,23 +399,22 @@ class evaluation_metric():
         o1_class_specific_novel_map = Average(novel_ap_list)
         o1_hmean = stats.hmean([o1_class_specific_base_map + 1e-10, o1_class_specific_novel_map + 1e-10])
 
-        class_specific_map = Average(list(self.class_dict.values()))
-        class_specific_base_map = Average([self.class_dict[_cls_name] for _cls_name in self.base_classes])
-        class_specific_novel_map = Average([self.class_dict[_cls_name] for _cls_name in self.novel_classes])
-        hmean = stats.hmean([class_specific_base_map + 1e-10, class_specific_novel_map + 1e-10])
+        o2_class_specific_map = Average(list(self.class_dict.values()))
+        o2_class_specific_base_map = Average([self.class_dict[_cls_name] for _cls_name in self.base_classes])
+        o2_class_specific_novel_map = Average([self.class_dict[_cls_name] for _cls_name in self.novel_classes])
+        o2_hmean = stats.hmean([o2_class_specific_base_map + 1e-10, o2_class_specific_novel_map + 1e-10])
 
         logger.warning("*" * 30)
-        logger.warning("(report metric)1-order harmonic map={}".format(o1_hmean))
-        logger.warning("(report metric)1-order class_specific_base_map={}".format(o1_class_specific_base_map))
-        logger.warning("(report metric)1-order class_specific_novel_map={}".format(o1_class_specific_novel_map))
+        logger.warning("1-order harmonic map={}".format(o1_hmean))
+        logger.warning("1-order class_specific_base_map={}".format(o1_class_specific_base_map))
+        logger.warning("1-order class_specific_novel_map={}".format(o1_class_specific_novel_map))
         logger.warning("1-order class_specific_map={}".format(o1_class_specific_map))
         logger.warning("1-order class_agnostic_map={}".format(o1_class_agnostic_map))
 
-        logger.warning("2-order harmonic map={}".format(hmean))
-        logger.warning("2-order class_specific_base_map={}".format(class_specific_base_map))
-        logger.warning("2-order class_specific_novel_map={}".format(class_specific_novel_map))
-        logger.warning("2-order class_specific_map={}".format(class_specific_map))
-
+        logger.warning("(report metric)2-order harmonic map={}".format(o2_hmean))
+        logger.warning("(report metric)2-order class_specific_base_map={}".format(o2_class_specific_base_map))
+        logger.warning("(report metric)2-order class_specific_novel_map={}".format(o2_class_specific_novel_map))
+        logger.warning("2-order class_specific_map={}".format(o2_class_specific_map))
         logger.warning(json_path)
         logger.warning(longvideo_json_path)
 
@@ -434,11 +432,11 @@ class evaluation_metric():
         )
 
         return dict(
-            hmean_ap=hmean,
-            ap=hmean,
-            class_specific_map=class_specific_map,
-            base_map=class_specific_base_map,
-            novel_map=class_specific_novel_map,
+            hmean_ap=o2_hmean,
+            ap=o2_hmean,
+            class_specific_map=o2_class_specific_map,
+            base_map=o2_class_specific_base_map,
+            novel_map=o2_class_specific_novel_map,
             old_ap=o1_class_agnostic_map,
             recall=self.full_retrieval_top,
             base_recall=self.base_retrieval_top,
