@@ -65,6 +65,8 @@ class VRActivityNet(data.Dataset):
             else:#only keep minimal novel class
                 new_dict[cls_name] = item_list[:self.novel_num]
             self.cur_label_list.append(cls_name)
+            if "noisy" in cls_name:
+                print("a")
 
         self.data_dict[self.split]=new_dict#remove novel and noisy label
         self.cls2int = {label: i for i, label in enumerate(self.cur_label_list)}

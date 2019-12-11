@@ -11,12 +11,10 @@ random.shuffle(activitynet_label_list)
 arv_train_label = activitynet_label_list[:100]
 arv_val_label = activitynet_label_list[100:120]
 arv_test_label = activitynet_label_list[120:]
-json_path = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv_db_100_20_80.json"
-json_path = json_path.replace("tao", username)
 
 short_name = "100_20_80"
-json_path = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv_db_{}.json".format(short_name)
+json_path = "/home/tao/lab/video-query-in-the-wild/data_generate/arv_db_{}.json".format(short_name)
 json_path = json_path.replace("tao", username)
 
-moment_eval_json_path = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv_db_{}_untrimmed.json".format(short_name)
+moment_eval_json_path = "/home/tao/lab/video-query-in-the-wild/data_generate/arv_db_{}_untrimmed.json".format(short_name)
 moment_eval_json_path = moment_eval_json_path.replace("tao", username)
