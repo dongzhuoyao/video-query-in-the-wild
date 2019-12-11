@@ -16,21 +16,17 @@ R_at_N_tiou_thres = 0.5
 NOISE_LABEL = "noisy_activity"
 RETRIEVAL_TYPE_NOISE = "noise"
 
-from data_generate.activitynet_label_100_20_80  import arv_train_label,arv_test_label,arv_val_label, activitynet_label_list,json_path,moment_eval_json_path
-from dongzhuoyao_utils import fps,noisy_label,activtynet_fps3_path,read_video,read_activitynet
 
-
+from dongzhuoyao_utils import fps,noisy_label,activtynet_fps3_path,read_video,read_activitynet,dataset_config
 class VRActivityNet(data.Dataset):
     def __init__(self, args):
-
-        self.num_classes = len(activitynet_label_list)
+        self.args = args
         self.transform = transforms.Compose([
                 videotransforms.RandomCrop(args.input_size),
             ])
         self.input_size = args.input_size
         self.fps = fps
         self.train_frame = args.train_frame
-        self.args = args
         self.split = "training"
         self.novel_num = args.novel_num
 
@@ -38,7 +34,7 @@ class VRActivityNet(data.Dataset):
         self.sanity_check()
         l = 0
         for cls_name in self.data_dict[self.split]:
-            if cls_name in set(activitynet_label_list)-set(list(noisy_label)):
+            if cls_name != noisy_label:
                 l += len(self.data_dict[self.split][cls_name])
         self.length = l
 
@@ -58,13 +54,13 @@ class VRActivityNet(data.Dataset):
         print("sanity check, removing {} items".format(len(list(_removed_dict.keys()))))
 
     def load_data(self):
-        self.data_dict = json.load(open(json_path))
+        self.data_dict = json.load(open(dataset_config[self.args.meta_split]['json_path']))
         print("load data done.")
         new_dict = {}
         self.cur_label_list = []
         for cls_name, item_list in self.data_dict[self.split].items():
             if cls_name == noisy_label:continue
-            if cls_name in arv_train_label:
+            if cls_name in dataset_config[self.args.meta_split]['arv_train_label']:
                 new_dict[cls_name] = item_list
             else:#only keep minimal novel class
                 new_dict[cls_name] = item_list[:self.novel_num]
@@ -210,7 +206,8 @@ def generate_multi_query(query_list):
 
 
 class evaluation_metric():
-    def __init__(self, query_list):
+    def __init__(self, args, query_list):
+        self.args = args
         self.class_dict = dict()
         self.class_agnostic_ap = []
         self.base_classes = []
@@ -255,7 +252,7 @@ class evaluation_metric():
     def set_class_info(self, query_list):
         for q in query_list:
             q = q[0]
-            assert q['label'] in arv_train_label+arv_test_label#only allow query video from train, test classes.
+            assert q['label'] in dataset_config[self.args.meta_split]['arv_train_label']+dataset_config[self.args.meta_split]['arv_test_label']#only allow query video from train, test classes.
             if q['retrieval_type'] == 'base':
                 self.base_classes.append(q['label'])
             elif q['retrieval_type'] == 'novel':
@@ -413,8 +410,8 @@ class evaluation_metric():
         logger.warning("(report metric)2-order class_specific_base_map={}".format(o2_class_specific_base_map))
         logger.warning("(report metric)2-order class_specific_novel_map={}".format(o2_class_specific_novel_map))
         logger.warning("2-order class_specific_map={}".format(o2_class_specific_map))
-        logger.warning(json_path)
-        logger.warning(moment_eval_json_path)
+        logger.warning(dataset_config[self.args.meta_split]['json_path'])
+        logger.warning(dataset_config[self.args.meta_split]['moment_eval_json_path'])
 
         # save confusion matrix related json.
         cm_dict = dict(
@@ -442,21 +439,21 @@ class evaluation_metric():
 
 class ARV_Retrieval_Clip():
     def __init__(self, args, feat_extract_func):
+        self.args = args
         self.temporal_stride = args.temporal_stride
         self.feat_extract_func = feat_extract_func
         self.feat_dim = args.metric_feat_dim
         self.clip_sec = args.clip_sec
         self.test_frame_num = args.test_frame_num
-        self.args = args
         self.test_batch_size = args.test_batch_size
         self.input_size = args.input_size
-        self.possible_classes = list(set(arv_train_label) | set(arv_test_label))
+        self.possible_classes = dataset_config[self.args.meta_split]['arv_train_label']+dataset_config[self.args.meta_split]['arv_test_label']
         self.load_data()
         logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
-        data_dict = json.load(open(moment_eval_json_path))
+        data_dict = json.load(open(dataset_config[self.args.meta_split]['moment_eval_json_path']))
         self.query_list = []
         for q in data_dict['query']:
             if q['retrieval_type'] == RETRIEVAL_TYPE_NOISE:
@@ -604,7 +601,7 @@ class ARV_Retrieval_Clip():
         else:
             self.query_list = generate_multi_query(self.query_list)
         self.query_list = [q for q in self.query_list if q[0]['is_query'] == 1]
-        self.class_map_evaluation = evaluation_metric(self.query_list)
+        self.class_map_evaluation = evaluation_metric(self.args, self.query_list)
 
         for _ in tqdm(range(len(self.query_list)), total=len(self.query_list), desc="eval_clips, ranking"):
             queries = self.query_list[_]
@@ -663,20 +660,20 @@ class ARV_Retrieval_Clip():
 
 class ARV_Retrieval_Moment():
     def __init__(self, args, feat_extract_func):
+        self.args = args
         self.temporal_stride = args.temporal_stride
         self.feat_extract_func = feat_extract_func
-        self.args = args
         self.test_batch_size = args.test_batch_size
         self.test_frame_num = args.test_frame_num
         self.input_size = args.input_size
-        self.possible_classes = list(set(arv_train_label) | set(arv_test_label))
+        self.possible_classes = dataset_config[self.args.meta_split]['arv_train_label']+dataset_config[self.args.meta_split]['arv_test_label']
         self.feat_dim = args.metric_feat_dim
         self.load_data()
         logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
         logger.warning("query_num: {}".format(self.args.query_num))
 
     def load_data(self):
-        data_dict = json.load(open(moment_eval_json_path))
+        data_dict = json.load(open(dataset_config[self.args.meta_split]['moment_eval_json_path']))
         query = data_dict['query']
         self.query_list = []
         for q in query:
@@ -837,7 +834,7 @@ class ARV_Retrieval_Moment():
             self.query_list = generate_multi_query(self.query_list)
 
         self.query_list = [q for q in self.query_list if q[0]['is_query']==1]
-        self.class_map_evaluation05 = evaluation_metric(self.query_list)
+        self.class_map_evaluation05 = evaluation_metric(self.args, self.query_list)
 
         from multiprocessing import Process, Queue, JoinableQueue, cpu_count
         def work(id, jobs, result):  # https://gist.github.com/brantfaircloth/1255715/5ce00c58ae8775c7d75a7bc08ab75d5c7f665bca
@@ -934,10 +931,9 @@ class ARV_Retrieval_Moment():
 
 class ARV_Retrieval():
     def __init__(self, args, feat_extract_func):
-
+        self.args = args
         self.feat_extract_func = feat_extract_func
         self.split = args.eval_split
-        self.args = args
         self.test_batch_size = args.test_batch_size
         self.input_size = args.input_size
         self.test_frame_num = args.test_frame_num
@@ -950,7 +946,7 @@ class ARV_Retrieval():
     def load_data(self):
         if self.split == 'training':#evaluate on training data for checking
             raise
-            self.data_dict = json.load(open(json_path))
+            self.data_dict = json.load(open(dataset_config[self.args.meta_split]['json_path']))
             self.data_list = dict(training=list(), testing=list(), validation=list())
             for k, v in self.data_dict[self.split].items():
                 if k == NOISE_LABEL:
@@ -959,7 +955,7 @@ class ARV_Retrieval():
                     self.data_list[self.split].extend(v[:10])  # for novel class, the real video number is less than 10.
             return
 
-        self.data_dict = json.load(open(json_path))
+        self.data_dict = json.load(open(dataset_config[self.args.meta_split]['json_path']))
         self.data_list = dict(training=list(), testing=list(), validation=list())
         for k, v in self.data_dict[self.split].items():
             self.data_list[self.split].extend(v)
@@ -1021,7 +1017,7 @@ class ARV_Retrieval():
         self.original_query_list = self.query_list
         self.query_list = generate_multi_query(self.query_list)
         self.query_list = [q for q in self.query_list if q[0]['is_query'] == 1]
-        self.class_map_evaluation = evaluation_metric(self.query_list)
+        self.class_map_evaluation = evaluation_metric(self.args, self.query_list)
 
         for _, queries in tqdm(enumerate(self.query_list), total=len(self.query_list),
                                desc="{}: ranking".format(self.split)):

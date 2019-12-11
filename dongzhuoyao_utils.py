@@ -22,6 +22,33 @@ json_path_1002080 = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv
 json_path_1002080 = json_path_1002080.replace("tao",username)
 
 noisy_label = "noisy_activity"
+import data_generate
+dataset_config = {
+    "100_20_80":dict(
+    arv_train_label=data_generate.activitynet_label_100_20_80.arv_train_label,
+    arv_test_label=data_generate.activitynet_label_100_20_80.arv_test_label,
+    arv_val_label=data_generate.activitynet_label_100_20_80.arv_val_label,
+    activitynet_label_list=data_generate.activitynet_label_100_20_80.activitynet_label_list,
+    json_path=data_generate.activitynet_label_100_20_80.json_path,
+    moment_eval_json_path=data_generate.activitynet_label_100_20_80.moment_eval_json_path,
+    ),
+    "120_20_60": dict(
+        arv_train_label=data_generate.activitynet_label_120_20_60.arv_train_label,
+        arv_test_label=data_generate.activitynet_label_120_20_60.arv_test_label,
+        arv_val_label=data_generate.activitynet_label_120_20_60.arv_val_label,
+        activitynet_label_list=data_generate.activitynet_label_120_20_60.activitynet_label_list,
+        json_path=data_generate.activitynet_label_120_20_60.json_path,
+        moment_eval_json_path=data_generate.activitynet_label_120_20_60.moment_eval_json_path,
+    ),
+    "80_20_100": dict(
+        arv_train_label=data_generate.activitynet_label_80_20_100.arv_train_label,
+        arv_test_label=data_generate.activitynet_label_80_20_100.arv_test_label,
+        arv_val_label=data_generate.activitynet_label_80_20_100.arv_val_label,
+        activitynet_label_list=data_generate.activitynet_label_80_20_100.activitynet_label_list,
+        json_path=data_generate.activitynet_label_80_20_100.json_path,
+        moment_eval_json_path=data_generate.activitynet_label_80_20_100.moment_eval_json_path,
+    )
+}
 
 def read_activitynet(video_dict):
         frame_duration_num = int((video_dict['segment'][1] - video_dict['segment'][0])*fps)

@@ -52,7 +52,7 @@ def parse():
     print('parsing arguments')
     parser = argparse.ArgumentParser(description='VR')
     parser.add_argument('--method', default="baseline", choices=['baseline', 'va', 'vasa'], type=str)
-    parser.add_argument('--class_split', default="100_20_80", choices=['100_20_80', '120_20_60', '80_20_100'], type=str)
+    parser.add_argument('--meta_split', default="100_20_80", choices=['100_20_80', '120_20_60', '80_20_100'], type=str)
     parser.add_argument('--evaluate', dest='evaluate', action='store_true', help='evaluate on validation sets')
     # Model parameters
     parser.add_argument('--input_size', default=input_size, type=int)

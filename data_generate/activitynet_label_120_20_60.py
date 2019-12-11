@@ -16,6 +16,6 @@ short_name = "120_20_60"
 json_path = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv_db_{}.json".format(short_name)
 json_path = json_path.replace("tao", username)
 
-longvideo_json_path = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv_db_{}_untrimmed.json".format(short_name)
-longvideo_json_path = longvideo_json_path.replace("tao", username)
+moment_eval_json_path = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv_db_{}_untrimmed.json".format(short_name)
+moment_eval_json_path = moment_eval_json_path.replace("tao", username)
 
