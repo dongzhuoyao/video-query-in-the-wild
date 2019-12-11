@@ -1,26 +1,28 @@
 ## Video query by Activity video in the Wild
 
 
-## TODO
 
+## TODO
 
 - ~~Evaluation metric tidy up~~
 - ~~normalize uniformly in invoked func~~
 - ~~decouple with pytorchgo~~
 - ~~Flexible novelty gain~~
 - ~~word embedding into sub_directory, set word embedding on the fly in an elegant way~~
-- ~~Evaluation into dataloader,~~think about an elegant way
+- ~~Evaluation into dataloader,~~
 - ~~duplicate logger~~
-- flexible evaluation, change class_split
-- seriously, eval_split: no hacking, real validation and testing subset utilization
+- ~~flexible evaluation, change class_split~~
+- ~~seriously, eval_split: no hacking, real validation and testing subset utilization~~
+- novelty gain check(long time task)
 - extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
-- visual bank implementation check
-- Flexible dataloader for ranking baseline
-- "noisy"->"distractor"
-- Exhaustive search combination result in moment retrieval should be updated
-- should remove background noise for activity.
 - NMS in Moment Retrieval
+- "noisy"->"distractor"
+- visual bank implementation check
+- should remove background noise for activity.
+- close dataset hacking flag
 - consider more baseline in https://arxiv.org/pdf/1912.04486.pdf
+- Flexible dataloader for ranking baseline
+- Exhaustive search combination result in moment retrieval should be updated in paper.
 - ~~bug:train on 100-20-80, evaluate on 100-100(20+80)~~,re-generate all experimental results
 
 ## Install

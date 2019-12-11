@@ -1010,8 +1010,7 @@ class ARV_Retrieval():
                 if  q['label'] in self.possible_classes:
                     self.query_list.append(q)
 
-            self.gallery_list = cur_list
-
+            self.gallery_list = cur_list#for gallery, use all videos
             with open(cache_path, 'wb') as fp:
                 logger.warning("dump cache_feat to {}".format(cache_path))
                 pickle.dump(dict(query_list=self.query_list, gallery_list=self.gallery_list), fp)
