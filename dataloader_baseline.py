@@ -432,12 +432,9 @@ class evaluation_metric():
         )
 
         return dict(
-            hmean_ap=o2_hmean,
             ap=o2_hmean,
-            class_specific_map=o2_class_specific_map,
             base_map=o2_class_specific_base_map,
             novel_map=o2_class_specific_novel_map,
-            old_ap=o1_class_agnostic_map,
             recall=self.full_retrieval_top,
             base_recall=self.base_retrieval_top,
             novel_recall=self.novel_retrieval_top,
