@@ -13,7 +13,7 @@ from scipy import stats
 fps = 3
 debug_iter = 30
 R_at_N_tiou_thres = 0.5
-NOISE_LABEL = "noisy_activity"
+NOISE_LABEL = "distractor_activity"
 RETRIEVAL_TYPE_NOISE = "noise"
 
 

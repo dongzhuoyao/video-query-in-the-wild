@@ -7,7 +7,7 @@ input_json = "video_segment.json"
 #output_json = 'arv_db_untrimmed.json'
 output_json = 'arv_db_120_20_60_untrimmed.json'
 minimal_sample_per_novel_class = 5
-noisy_label = "noisy_activity"
+noisy_label = "distractor_activity"
 validation_sample_per_class = 10
 
 from activitynet_label_120_20_60 import activitynet_label_list,arv_val_label,arv_test_label,arv_train_label

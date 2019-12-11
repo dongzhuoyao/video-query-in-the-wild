@@ -8,7 +8,7 @@ from activitynet_label_100_20_80 import activitynet_label_list, arv_val_label, a
 output_json = 'arv_db_100_20_80.json'
 
 minimal_sample_per_novel_class = 5
-DISTRACTOR_LABEL = "noisy_activity"
+DISTRACTOR_LABEL = "distractor_activity"
 validation_sample_per_class = 10
 activitynet_data = json.load(open('./activity_net.v1-3.min.json'))
 data = json.load(open(input_json))

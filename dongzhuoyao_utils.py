@@ -21,7 +21,7 @@ json_path_v2 = json_path_v2.replace("tao",username)
 json_path_1002080 = "/home/tao/lab/activity-retrieval-by-video/data_generate/arv_db_100_20_80.json"
 json_path_1002080 = json_path_1002080.replace("tao",username)
 
-noisy_label = "noisy_activity"
+noisy_label = "distractor_activity"
 import data_generate
 dataset_config = {
     "100_20_80":dict(

@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 saliency_ratio = 2
 resolution = 100
-noisy_label = "noisy_activity"
+noisy_label = "distractor_activity"
 noise_video_scan_stride = 10 * resolution  # unit: sec
 noise_video_length_random = [10 * resolution, 180 * resolution]  # unit: sec
 activity_minimal_sec = 3 * resolution
