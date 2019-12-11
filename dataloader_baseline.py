@@ -486,7 +486,7 @@ class ARV_Retrieval_Clip():
                 if self.args.debug and idxx > debug_iter: break
 
                 if self.args.memory_leak_debug:
-                    feat = np.random.rand(len(data_batch), self.feat_dim, self.test_frame_num).astype(np.float32)
+                    feat = np.random.rand(self.feat_dim, self.test_frame_num).astype(np.float32)
                 else:
                     img = _pre_process(data_batch, self.input_size, self.test_frame_num)
                     feat = self.feat_extract_func(img)
@@ -707,7 +707,7 @@ class ARV_Retrieval_Moment():
                                              len(chunk_list))):
                 if self.args.debug and idxx > debug_iter: break
                 if  self.args.memory_leak_debug:
-                    feat = np.random.rand(len(data_batch), self.feat_dim, self.test_frame_num).astype(np.float32)
+                    feat = np.random.rand(self.feat_dim, self.test_frame_num).astype(np.float32)
                 else:
                     img = _pre_process(data_batch, self.input_size, self.test_frame_num)
                     feat = self.feat_extract_func(img)
@@ -983,11 +983,12 @@ class ARV_Retrieval():
                                                                                              self.test_batch_size,
                                                                                              len(chunk_list))):
                 if self.args.debug and idxx > 5: break
-                if not self.args.memory_leak_debug:
+                if  self.args.memory_leak_debug:
+                    feat = np.random.rand(self.feat_dim, self.test_frame_num).astype(np.float32)
+                else:
                     img = _pre_process(data_batch, self.input_size, self.test_frame_num)
                     feat = self.feat_extract_func(img)
-                else:
-                    feat = np.random.rand(len(data_batch), self.feat_dim).astype(np.float32)
+
                 tpooled_feat = np.mean(feat, axis=-1)
                 for i in range(len(data_batch)):
                     data_batch[i]['feat'] = tpooled_feat[i]
@@ -1009,6 +1010,7 @@ class ARV_Retrieval():
         for _g in self.gallery_list:
             xb.append(_g['feat'].reshape(1, -1))
         xb = np.concatenate(xb, axis=0)
+        import ipdb;ipdb.set_trace()
         index.add(xb)  # add vectors to the index
         logger.info("faiss index.ntotal: {}".format(index.ntotal))
         self.faiss_index = index
