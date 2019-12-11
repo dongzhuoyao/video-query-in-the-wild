@@ -101,8 +101,10 @@ class ResNet3D(nn.Module):
         rank_embed = x.view(x.size(0), x.size(1),x.size(2), -1).mean(dim=3)#B,C,T,torch.Size([12, 512, 128])
         embed =  x.view(x.size(0), x.size(1), -1).mean(dim=2)#B,C
         logits = self.fc(self.dropout(embed))#torch.Size([8, 200, 15, 1, 1])
-
-        return rank_embed, logits
+        if self.training:
+            return rank_embed, logits
+        else:
+            return rank_embed
 
     def load_2d(self, model2d):
         print('inflating 2d resnet parameters')

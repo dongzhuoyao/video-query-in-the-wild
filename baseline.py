@@ -152,8 +152,8 @@ def do_eval(args, model):
             metric_feat = model(input,None,None,None)  # [B,C,T]
         else:
             raise
-        metric_feat = metric_feat[0]
         metric_feat = F.normalize(metric_feat, p=2, dim=1)#normalize on C
+        import ipdb;ipdb.set_trace()
         return metric_feat.data.cpu().numpy()
 
     if args.eval_clip:
