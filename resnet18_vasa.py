@@ -141,12 +141,13 @@ class ResNet3D(nn.Module):
                 tmp = -torch.norm(normalized_cls_embed[b] - self.visual_memory, p=2, dim=1) / temperature
                 reg_logits[b] = tmp
 
-            with torch.no_grad():
+            with torch.no_grad():#memory maintenance: only updating, no back propogation.
                 for ii, _y in enumerate(target):
-                    old = self.visual_memory.data[_y]
-                    tmp = mv * old + (1 - mv) * normalized_cls_embed[ii]
+                    old_memory = self.visual_memory.data[_y]
+                    tmp = mv * old_memory + (1 - mv) * normalized_cls_embed[ii]
                     self.visual_memory.data[_y] = F.normalize(tmp, p=2,
                                                               dim=0)  # https://discuss.pytorch.org/t/leaf-variable-was-used-in-an-inplace-operation/308/4
+
             #self.word_adaptor
             word_logits = torch.ones([batch_size, self.num_classes]).cuda()
             for b in range(batch_size):
