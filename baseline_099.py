@@ -115,7 +115,7 @@ def adjust_learning_rate(startlr, decay_rate, optimizer, epoch):
             logger.warning('update optimizer group {} from lr = {} to {}'.format(g_id, origin_lr, param_group['lr']))
 
     show_lr = optimizer.param_groups[0]['lr']
-    logger.warning("current lr={}".format(show_lr))
+    logger.warning("current lr={}, logger_dir={}".format(show_lr, logger.get_logger_dir()))
     return show_lr
 
 
