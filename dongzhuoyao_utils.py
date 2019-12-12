@@ -1,7 +1,7 @@
 import torch,os
 import torchvision.transforms as transforms
+from PIL import Image
 import numpy as np
-from datasets.utils import default_loader
 import getpass
 
 fps = 3
@@ -11,14 +11,14 @@ activtynet_fps3_path  = '/home/tao/dataset/v1-3/mkv_train_val_frames_3'
 username = getpass. getuser()
 activtynet_fps3_path = activtynet_fps3_path.replace("tao",username)
 
-json_path = "/home/tao/lab/video-query-in-the-wild/data_generate/arv_db.json"
+json_path = "data_generate/arv_db.json"
 json_path = json_path.replace("tao",username)
 
 
-json_path_v2 = "/home/tao/lab/video-query-in-the-wild/data_generate/arv_db_100_20_80.json"
+json_path_v2 = "data_generate/arv_db_100_20_80.json"
 json_path_v2 = json_path_v2.replace("tao",username)
 
-json_path_1002080 = "/home/tao/lab/video-query-in-the-wild/data_generate/arv_db_100_20_80.json"
+json_path_1002080 = "data_generate/arv_db_100_20_80.json"
 json_path_1002080 = json_path_1002080.replace("tao",username)
 
 noisy_label = "distractor_activity"
@@ -49,6 +49,38 @@ dataset_config = {
         moment_eval_json_path=data_generate.activitynet_label_80_20_100.moment_eval_json_path,
     )
 }
+
+def pil_loader(path):
+    # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
+    #for _ in range(5):
+    #    try:
+    #        with open(path, 'rb') as f:
+    #            img = Image.open(f)
+    #            return img.convert('RGB')
+    #    except IOError as e:
+    #        print(e)
+    #        print('waiting 5 sec and trying again')
+    #        time.sleep(5)
+    #raise IOError
+    with open(path, 'rb') as f:
+        img = Image.open(f)
+        return img.convert('RGB')
+
+
+def accimage_loader(path):
+    import accimage
+    try:
+        return accimage.Image(path)
+    except IOError:
+        # Potentially a decoding problem, fall back to PIL.Image
+        return pil_loader(path)
+
+def default_loader(path):
+    from torchvision import get_image_backend
+    if get_image_backend() == 'accimage':
+        return accimage_loader(path)
+    else:
+        return pil_loader(path)
 
 def read_activitynet(video_dict):
         frame_duration_num = int((video_dict['segment'][1] - video_dict['segment'][0])*fps)

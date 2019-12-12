@@ -2,7 +2,7 @@ import torch,os
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import numpy as np
-import datasets.video_transforms as videotransforms
+import video_transforms as videotransforms
 from tqdm import tqdm
 import random, json
 import pytorchgo_logger as logger
@@ -171,7 +171,6 @@ def _pre_process(cur_video_list, input_size, test_frame_num):  # time-consuming
                             gt_frame_num=frame_num, train_frame_num=test_frame_num,
                             video_transform=transforms.Compose([
                                 videotransforms.CenterCrop(input_size),
-                                # videotransforms.RandomHorizontalFlip()
                             ]),
                             activitynet_frame_num=activitynet_frame_num)
         images = torch.from_numpy(images).float().unsqueeze(0)
