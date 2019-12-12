@@ -45,7 +45,7 @@ dropout = 0.5
 temporal_stride = 1
 clip_sec = 6
 metric_feat_dim = 512
-moving_average = 0.999
+moving_average = 0.99
 
 
 def parse():

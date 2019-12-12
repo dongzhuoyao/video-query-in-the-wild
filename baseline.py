@@ -100,9 +100,8 @@ def parse():
     args = parser.parse_args()
 
     args.pretrained = pretrained
-
-    logger.set_logger_dir(
-        "train_log/{}_{}_novel{}".format(os.path.basename(__file__).replace(".py", ""), args.method, args.novel_num))
+    args.logger_dir = "train_log/{}_{}_novel{}".format(os.path.basename(__file__).replace(".py", ""), args.method, args.novel_num)
+    logger.set_logger_dir(args.logger_dir)
     return args
 
 
@@ -433,7 +432,7 @@ def main():
                     'optimizer': optimizer.state_dict(),
                 }, os.path.join(logger.get_logger_dir(), "best.pth.tar"))
 
-    weigth_path = os.path.join("train_log", os.path.basename(__file__).replace(".py", ""), "best.pth.tar")
+    weigth_path = os.path.join(logger.get_logger_dir(), "best.pth.tar")
     saved_dict = torch.load(weigth_path)
     logger.warning("loading weight {}, best validation result={}".format(weigth_path, saved_dict['score']))
     model.load_state_dict(saved_dict['state_dict'], strict=True)
