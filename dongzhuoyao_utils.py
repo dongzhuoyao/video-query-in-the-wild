@@ -6,11 +6,13 @@ import getpass
 import data_generate
 
 fps = 3
-activtynet_fps3_path  = '/home/tao/dataset/v1-3/mkv_train_val_frames_3'.replace("tao",getpass. getuser())
-json_path = "data_generate/arv_db.json"
-json_path_v2 = "data_generate/arv_db_100_20_80.json"
-json_path_1002080 = "data_generate/arv_db_100_20_80.json"
 noisy_label = "distractor_activity"
+activtynet_fps3_path  = '/home/tao/dataset/v1-3/mkv_train_val_frames_3'.replace("tao",getpass. getuser())
+
+#json_path = "data_generate/arv_db.json"
+#json_path_v2 = "data_generate/arv_db_100_20_80.json"
+#json_path_1002080 = "data_generate/arv_db_100_20_80.json"
+
 
 
 
