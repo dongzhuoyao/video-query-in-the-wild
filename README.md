@@ -14,19 +14,20 @@
 - ~~duplicate logger~~
 - ~~flexible evaluation, change class_split~~
 - ~~seriously, eval_split: no hacking, real validation and testing subset utilization~~
-- flexible dataset root, remove tao
+- ~~flexible dataset root, remove tao~~
 - try memory ratio 0.999
 - novelty gain check(long time task)
 - extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
 - NMS in Moment Retrieval
 - ~~visual bank implementation check~~
 - ~~"noisy"->"distractor"~~
-- should remove background noise for activity.
-- close dataset hacking flag
 - consider more baseline in https://arxiv.org/pdf/1912.04486.pdf
 - Flexible dataloader for ranking baseline
+- should remove background noise for activity.
+- close dataset hacking flag
 - Exhaustive search combination result in moment retrieval should be updated in paper.
 - ~~bug:train on 100-20-80, evaluate on 100-100(20+80)~~,re-generate all experimental results
+- remove absolute path of tao
 
 ## Install
 

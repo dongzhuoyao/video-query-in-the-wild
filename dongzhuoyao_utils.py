@@ -3,26 +3,17 @@ import torchvision.transforms as transforms
 from PIL import Image
 import numpy as np
 import getpass
+import data_generate
 
 fps = 3
-activtynet_fps3_path  = '/home/tao/dataset/v1-3/mkv_train_val_frames_3'
-
-
-username = getpass. getuser()
-activtynet_fps3_path = activtynet_fps3_path.replace("tao",username)
-
+activtynet_fps3_path  = '/home/tao/dataset/v1-3/mkv_train_val_frames_3'.replace("tao",getpass. getuser())
 json_path = "data_generate/arv_db.json"
-json_path = json_path.replace("tao",username)
-
-
 json_path_v2 = "data_generate/arv_db_100_20_80.json"
-json_path_v2 = json_path_v2.replace("tao",username)
-
 json_path_1002080 = "data_generate/arv_db_100_20_80.json"
-json_path_1002080 = json_path_1002080.replace("tao",username)
-
 noisy_label = "distractor_activity"
-import data_generate
+
+
+
 dataset_config = {
     "100_20_80":dict(
     arv_train_label=data_generate.activitynet_label_100_20_80.arv_train_label,
