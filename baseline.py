@@ -49,7 +49,7 @@ dropout = 0.5
 temporal_stride = 1
 clip_sec = 6
 metric_feat_dim = 512
-
+moving_average = 0.9
 
 def parse():
     print("parsing arguments")
@@ -165,16 +165,20 @@ def parse():
     parser.add_argument("--eval_moment", action="store_true")
     parser.add_argument("--eval_clip", action="store_true")
     parser.add_argument("--eval_all", action="store_true")
+    parser.add_argument("--log_action", default="n", type=str)
+    parser.add_argument("--moving_average", default=moving_average, type=int)
+
 
     args = parser.parse_args()
 
     args.pretrained = pretrained
-    args.logger_dir = "train_log/{}_{}_novel{}".format(
+    args.logger_dir = "train_log/{}_{}_novel{}_mv{}".format(
         os.path.basename(__file__).replace(".py", ""),
         args.method,
         args.novel_num,
+        args.moving_average
     )
-    logger.set_logger_dir(args.logger_dir)
+    logger.set_logger_dir(args.logger_dir, args.log_action)
     return args
 
 
@@ -435,7 +439,7 @@ def train_va(loader, model, optimizer, epoch, args):
             input.shape[5],
         )
         metric_feat, cls_logits, reg_logits = model(
-            input, target, temperature=0.1
+            input, target, temperature=0.1,mv=args.moving_average
         )
         ce_loss = ce_loss_criterion(cls_logits.cuda(), target.long().cuda())
         register_loss = ce_loss_criterion(
