@@ -94,13 +94,13 @@ def parse():
 
     # System parameters
     parser.add_argument(
-        "--j",
+        "--workers",
         default=8,
         type=int,
         help="number of data loading workers (default: 4)",
     )
     parser.add_argument(
-        "--p", default=50, type=int, help="print frequency (default: 10)"
+        "--print_freq", default=50, type=int, help="print frequency (default: 10)"
     )
     parser.add_argument("--manual_seed", default=0, type=int)
     parser.add_argument("--query_num", default=1, type=int)
@@ -136,7 +136,7 @@ def parse():
     parser.add_argument("--accum_grad", default=1, type=int)
     parser.add_argument("--momentum", default=0.9, type=float, help="momentum")
     parser.add_argument(
-        "--wd", default=1e-5, type=float, help="weight decay (default: 1e-4)"
+        "--wd", default=1e-5, type=float, help="weight decay"
     )
     parser.add_argument("--test_load", type=str)
     parser.add_argument("--novel_num", default=novel_num, type=int)
@@ -147,7 +147,7 @@ def parse():
     parser.add_argument("--temporal_stride", default=temporal_stride, type=int)
     parser.add_argument("--clip_sec", default=clip_sec, type=int)
     parser.add_argument("--metric_feat_dim", default=metric_feat_dim, type=int)
-    parser.add_argument("--read_cache_feat", default=False, action="store_true")
+    parser.add_argument("--read_cache_feat", action="store_true")
     parser.add_argument("--memory_leak_debug", action="store_true")
 
     parser.add_argument("--eval_moment", action="store_true")
@@ -542,17 +542,9 @@ def main():
 
     if args.evaluate:
         logger.info(vars(args))
-        if args.test_load is not None:
-            weight_path = args.test_load
-        else:
-            weight_path = os.path.join(
-                "train_log",
-                os.path.basename(__file__).replace(".py", ""),
-                "best.pth.tar",
-            )
-
-        saved_dict = torch.load(weight_path)
-        logger.warning("loading weight {}".format(weight_path))
+        assert args.test_load is not None
+        saved_dict = torch.load(args.test_load)
+        logger.warning("loading weight {}".format(args.test_load))
         model.load_state_dict(saved_dict["state_dict"], strict=True)
         args.read_cache_feat = True
         score_dict = do_eval(args=args, model=model)

@@ -922,6 +922,7 @@ class ARV_Retrieval_Clip:
             d = self.ranking()
             return d
         else:
+            logger.warning("only run trimmed video evaluation when training")
             return None
 
 
@@ -1307,6 +1308,7 @@ class ARV_Retrieval_Moment:
             d = self.ranking()
             return d
         else:
+            logger.warning("only run trimmed video evaluation when training")
             return None
 
 
