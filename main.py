@@ -53,7 +53,7 @@ moving_average = 0.9
 
 def parse():
     print("parsing arguments")
-    parser = argparse.ArgumentParser(description="VR")
+    parser = argparse.ArgumentParser(description="Video Retrieval In the Wild")
     parser.add_argument(
         "--method",
         default="baseline",
@@ -68,7 +68,6 @@ def parse():
     )
     parser.add_argument(
         "--evaluate",
-        dest="evaluate",
         action="store_true",
         help="evaluate on validation sets",
     )
@@ -82,7 +81,6 @@ def parse():
     )
     parser.add_argument(
         "--pretrained",
-        dest="pretrained",
         action="store_true",
         help="use pre-trained model",
     )
@@ -99,15 +97,13 @@ def parse():
 
     # System parameters
     parser.add_argument(
-        "-j",
-        "--workers",
+        "--j",
         default=8,
         type=int,
         help="number of data loading workers (default: 4)",
     )
     parser.add_argument(
-        "--print_freq",
-        "-p",
+        "--p",
         default=50,
         type=int,
         help="print frequency (default: 10)",
@@ -159,7 +155,7 @@ def parse():
     parser.add_argument("--metric_feat_dim", default=metric_feat_dim, type=int)
     parser.add_argument("--read_cache_feat", default=False, action="store_true")
     parser.add_argument(
-        "--memory_leak_debug", default=False, action="store_true"
+        "--memory_leak_debug", action="store_true"
     )
 
     parser.add_argument("--eval_moment", action="store_true")

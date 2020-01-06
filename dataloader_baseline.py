@@ -1103,6 +1103,8 @@ class ARV_Retrieval_Moment:
                                     axis=1,
                                 ),
                                 video_id=_g["video_id"],
+                                start_sec = moment_start_sec,
+                                end_sec = moment_start_sec + moment_duration_sec,
                                 hit_list=cal_hit(loc_sec),
                             )
                         )
@@ -1233,12 +1235,17 @@ class ARV_Retrieval_Moment:
                     )  # ranking
                 single_query_hit = tmp_single_query_hit
 
+                # dongzhuoyao,TODO, can do NMS after thresholding.
+                #cluster
+                #nms
+                #concatenate
+
                 for s in single_query_hit:
                     if s["iou"] >= 0.5:
                         s["tp"] = 1
                     else:
                         s["tp"] = 0
-                # dongzhuoyao,TODO, can do NMS after thresholding.
+
                 d05 = self.class_map_evaluation05.multiprocess_calculate(
                     single_query_hit=single_query_hit
                 )
