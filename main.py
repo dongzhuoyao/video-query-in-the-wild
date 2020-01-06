@@ -632,6 +632,9 @@ def main():
     args.eval_split = "testing"
     logger.info(vars(args))
     score_dict = do_eval(args=args, model=model)
+    logger.info(
+        "training finish. snapshot weight in {}".format(logger.get_logger_dir())
+    )
 
 
 def pdbmain():
