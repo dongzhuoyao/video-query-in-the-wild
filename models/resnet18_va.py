@@ -1,6 +1,7 @@
 import torch.nn as nn
 from collections import OrderedDict
 import torch.nn.functional as F
+import torch
 
 
 class BasicBlock(nn.Module):
