@@ -4,7 +4,10 @@ import torchvision.transforms as transforms
 import numpy as np
 from tqdm import tqdm
 import random, json
-from misc_utils import pytorchgo_logger as logger, video_transforms as videotransforms
+from misc_utils import (
+    pytorchgo_logger as logger,
+    video_transforms as videotransforms,
+)
 from sklearn.metrics import average_precision_score
 import faiss
 from scipy import stats
@@ -1103,8 +1106,8 @@ class ARV_Retrieval_Moment:
                                     axis=1,
                                 ),
                                 video_id=_g["video_id"],
-                                start_sec = moment_start_sec,
-                                end_sec = moment_start_sec + moment_duration_sec,
+                                start_sec=moment_start_sec,
+                                end_sec=moment_start_sec + moment_duration_sec,
                                 hit_list=cal_hit(loc_sec),
                             )
                         )
@@ -1236,9 +1239,9 @@ class ARV_Retrieval_Moment:
                 single_query_hit = tmp_single_query_hit
 
                 # dongzhuoyao,TODO, can do NMS after thresholding.
-                #cluster
-                #nms
-                #concatenate
+                # cluster
+                # nms
+                # concatenate
 
                 for s in single_query_hit:
                     if s["iou"] >= 0.5:

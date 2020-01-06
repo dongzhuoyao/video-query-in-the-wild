@@ -51,6 +51,7 @@ clip_sec = 6
 metric_feat_dim = 512
 moving_average = 0.9
 
+
 def parse():
     print("parsing arguments")
     parser = argparse.ArgumentParser(description="Video Retrieval In the Wild")
@@ -67,9 +68,7 @@ def parse():
         type=str,
     )
     parser.add_argument(
-        "--evaluate",
-        action="store_true",
-        help="evaluate on validation sets",
+        "--evaluate", action="store_true", help="evaluate on validation sets"
     )
     # Model parameters
     parser.add_argument("--input_size", default=input_size, type=int)
@@ -80,9 +79,7 @@ def parse():
         help="[0-1], 0 = leave defaults",
     )
     parser.add_argument(
-        "--pretrained",
-        action="store_true",
-        help="use pre-trained model",
+        "--pretrained", action="store_true", help="use pre-trained model"
     )
     parser.add_argument("--pretrained_weights", default="")
     parser.add_argument("--nclass", default=nclass, type=int)
@@ -103,10 +100,7 @@ def parse():
         help="number of data loading workers (default: 4)",
     )
     parser.add_argument(
-        "--p",
-        default=50,
-        type=int,
-        help="print frequency (default: 10)",
+        "--p", default=50, type=int, help="print frequency (default: 10)"
     )
     parser.add_argument("--manual_seed", default=0, type=int)
     parser.add_argument("--query_num", default=1, type=int)
@@ -154,16 +148,13 @@ def parse():
     parser.add_argument("--clip_sec", default=clip_sec, type=int)
     parser.add_argument("--metric_feat_dim", default=metric_feat_dim, type=int)
     parser.add_argument("--read_cache_feat", default=False, action="store_true")
-    parser.add_argument(
-        "--memory_leak_debug", action="store_true"
-    )
+    parser.add_argument("--memory_leak_debug", action="store_true")
 
     parser.add_argument("--eval_moment", action="store_true")
     parser.add_argument("--eval_clip", action="store_true")
     parser.add_argument("--eval_all", action="store_true")
     parser.add_argument("--log_action", default="n", type=str)
     parser.add_argument("--moving_average", default=moving_average, type=int)
-
 
     args = parser.parse_args()
 
@@ -172,7 +163,7 @@ def parse():
         os.path.basename(__file__).replace(".py", ""),
         args.method,
         args.novel_num,
-        args.moving_average
+        args.moving_average,
     )
     logger.set_logger_dir(args.logger_dir, args.log_action)
     return args
@@ -435,7 +426,7 @@ def train_va(loader, model, optimizer, epoch, args):
             input.shape[5],
         )
         metric_feat, cls_logits, reg_logits = model(
-            input, target, temperature=0.1,mv=args.moving_average
+            input, target, temperature=0.1, mv=args.moving_average
         )
         ce_loss = ce_loss_criterion(cls_logits.cuda(), target.long().cuda())
         register_loss = ce_loss_criterion(

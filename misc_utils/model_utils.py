@@ -148,14 +148,17 @@ def set_distributed_backend(model, args):
             model = MyDataParallel(model).cuda()
     return model
 
+
 import numpy as np
 import torch
+
+
 def nms_cpu(dets, thresh):
     dets = dets.numpy()
     x1 = dets[:, 0]
     x2 = dets[:, 1]
     scores = dets[:, 2]
-    length = (x2 - x1 + 1)
+    length = x2 - x1 + 1
     order = scores.argsort()[::-1]
     keep = []
     while order.size > 0:
