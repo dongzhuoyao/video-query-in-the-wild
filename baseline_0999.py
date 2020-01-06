@@ -4,8 +4,8 @@ import numpy as np
 from bdb import BdbQuit
 import traceback
 import sys
-import pytorchgo_logger as logger
-from pytorch_util import model_summary, optimizer_summary, set_gpu
+from misc_utils import pytorchgo_logger as logger
+from misc_utils.pytorch_util import model_summary, optimizer_summary, set_gpu
 
 import cv2
 import torch.nn as nn
@@ -202,11 +202,11 @@ def adjust_learning_rate(startlr, decay_rate, optimizer, epoch):
 
 def get_model(args):
     if args.method == "baseline":
-        from resnet18_3d_f2f import ResNet3D, BasicBlock
+        from models.resnet18_3d_f2f import ResNet3D, BasicBlock
     elif args.method == "va":
-        from resnet18_va import ResNet3D, BasicBlock
+        from models.resnet18_va import ResNet3D, BasicBlock
     elif args.method == "vasa":
-        from resnet18_vasa import ResNet3D, BasicBlock
+        from models.resnet18_vasa import ResNet3D, BasicBlock
     else:
         raise
     model = ResNet3D(
@@ -218,7 +218,7 @@ def get_model(args):
 
         model2d = resnet18(pretrained=True)
         model.load_2d(model2d)
-    from model_utils import set_distributed_backend
+    from misc_utils.model_utils import set_distributed_backend
 
     model = set_distributed_backend(
         model, args

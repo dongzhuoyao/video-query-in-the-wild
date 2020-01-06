@@ -2,10 +2,9 @@ import torch, os
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import numpy as np
-import video_transforms as videotransforms
 from tqdm import tqdm
 import random, json
-import pytorchgo_logger as logger
+from misc_utils import pytorchgo_logger as logger, video_transforms as videotransforms
 from sklearn.metrics import average_precision_score
 import faiss
 from scipy import stats
@@ -17,7 +16,7 @@ NOISE_LABEL = "distractor_activity"
 RETRIEVAL_TYPE_NOISE = "noise"
 
 
-from dongzhuoyao_utils import (
+from misc_utils.dongzhuoyao_utils import (
     fps,
     noisy_label,
     activtynet_fps3_path,
@@ -1482,7 +1481,6 @@ class ARV_Retrieval:
                 ):  # evaluation based on class
                     from hierachy_class_util import (
                         is_same_father,
-                        is_same_grandfather,
                         is_same_grandgrandfather,
                     )
 
@@ -1497,7 +1495,6 @@ class ARV_Retrieval:
                 ):  # evaluation based on class
                     from hierachy_class_util import (
                         is_same_father,
-                        is_same_grandfather,
                         is_same_grandgrandfather,
                     )
 

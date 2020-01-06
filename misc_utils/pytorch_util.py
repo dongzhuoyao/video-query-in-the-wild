@@ -1,7 +1,7 @@
 # Author: Tao Hu <taohu620@gmail.com>
 
 import torch
-import pytorchgo_logger as logger
+from misc_utils import pytorchgo_logger as logger
 from termcolor import colored
 from tabulate import tabulate
 import warnings, os, sys

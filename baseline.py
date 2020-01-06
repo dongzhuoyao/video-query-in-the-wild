@@ -4,8 +4,8 @@ import numpy as np
 from bdb import BdbQuit
 import traceback
 import sys
-import pytorchgo_logger as logger
-from pytorch_util import model_summary, optimizer_summary, set_gpu
+from misc_utils import pytorchgo_logger as logger
+from misc_utils.pytorch_util import model_summary, optimizer_summary, set_gpu
 
 import cv2
 import torch.nn as nn
@@ -178,7 +178,7 @@ def parse():
     return args
 
 
-def adjust_learning_rate(startlr, decay_rate, optimizer, epoch):
+def adjust_learning_rate(decay_rate, optimizer, epoch):
     decay_rates = int(decay_rate)
     if epoch == decay_rates:
         for g_id, param_group in enumerate(optimizer.param_groups):
@@ -199,11 +199,11 @@ def adjust_learning_rate(startlr, decay_rate, optimizer, epoch):
 
 def get_model(args):
     if args.method == "baseline":
-        from resnet18_3d_f2f import ResNet3D, BasicBlock
+        from models.resnet18_3d_f2f import ResNet3D, BasicBlock
     elif args.method == "va":
-        from resnet18_va import ResNet3D, BasicBlock
+        from models.resnet18_va import ResNet3D, BasicBlock
     elif args.method == "vasa":
-        from resnet18_vasa import ResNet3D, BasicBlock
+        from models.resnet18_vasa import ResNet3D, BasicBlock
     else:
         raise
     model = ResNet3D(
@@ -215,7 +215,7 @@ def get_model(args):
 
         model2d = resnet18(pretrained=True)
         model.load_2d(model2d)
-    from model_utils import set_distributed_backend
+    from misc_utils.model_utils import set_distributed_backend
 
     model = set_distributed_backend(
         model, args
@@ -272,7 +272,7 @@ def train_ranking(loader, model, optimizer, epoch, args):
     loss_meter = AverageMeter()
     ce_loss_meter = AverageMeter()
     reg_loss_meter = AverageMeter()
-    cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
+    cur_lr = adjust_learning_rate(args.lr_decay_rate, optimizer, epoch)
     model.train()
     optimizer.zero_grad()
     ce_loss_criterion = nn.CrossEntropyLoss()
@@ -342,7 +342,7 @@ def train_vasa(loader, model, optimizer, epoch, args):
     ce_loss_meter = AverageMeter()
     reg_loss_meter = AverageMeter()
     word_loss_meter = AverageMeter()
-    cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
+    cur_lr = adjust_learning_rate(args.lr_decay_rate, optimizer, epoch)
     model.train()
     optimizer.zero_grad()
     ce_loss_criterion = nn.CrossEntropyLoss()
@@ -413,7 +413,7 @@ def train_va(loader, model, optimizer, epoch, args):
     loss_meter = AverageMeter()
     ce_loss_meter = AverageMeter()
     reg_loss_meter = AverageMeter()
-    cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
+    cur_lr = adjust_learning_rate(args.lr_decay_rate, optimizer, epoch)
     model.train()
     optimizer.zero_grad()
     ce_loss_criterion = nn.CrossEntropyLoss()
@@ -481,7 +481,7 @@ def train(loader, model, optimizer, epoch, args):
     data_time = AverageMeter()
     loss_meter = AverageMeter()
     ce_loss_meter = AverageMeter()
-    cur_lr = adjust_learning_rate(args.lr, args.lr_decay_rate, optimizer, epoch)
+    cur_lr = adjust_learning_rate(args.lr_decay_rate, optimizer, epoch)
     model.train()
     optimizer.zero_grad()
     ce_loss_criterion = nn.CrossEntropyLoss()

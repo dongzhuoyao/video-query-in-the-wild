@@ -1,8 +1,6 @@
 import torch.nn as nn
 from collections import OrderedDict
 import torch.nn.functional as F
-import torch, json
-import numpy as np
 
 
 class BasicBlock(nn.Module):
@@ -118,7 +116,7 @@ class ResNet3D(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.dropout = nn.Dropout(0.5)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
-        from nl import NONLocalBlock1D
+        from misc_utils.nl import NONLocalBlock1D
 
         self.cls_nl = NONLocalBlock1D(
             in_channels=512 * block.expansion,
