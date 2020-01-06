@@ -1,7 +1,8 @@
 import numpy as np
 import numbers
 import random
-#import torchvision.transforms as transforms
+
+# import torchvision.transforms as transforms
 import cv2
 
 
@@ -33,19 +34,19 @@ class RandomCrop(object):
         if w == tw and h == th:
             return 0, 0, h, w
 
-        i = random.randint(0, h - th) if h!=th else 0
-        j = random.randint(0, w - tw) if w!=tw else 0
+        i = random.randint(0, h - th) if h != th else 0
+        j = random.randint(0, w - tw) if w != tw else 0
         return i, j, th, tw
 
     def __call__(self, imgs):
-        
+
         i, j, h, w = self.get_params(imgs, self.size)
 
-        imgs = imgs[:, i:i+h, j:j+w, :]
+        imgs = imgs[:, i : i + h, j : j + w, :]
         return imgs
 
     def __repr__(self):
-        return self.__class__.__name__ + '(size={0})'.format(self.size)
+        return self.__class__.__name__ + "(size={0})".format(self.size)
 
 
 class CenterCrop(object):
@@ -71,13 +72,13 @@ class CenterCrop(object):
         """
         t, h, w, c = imgs.shape
         th, tw = self.size
-        i = int(np.round((h - th) / 2.))
-        j = int(np.round((w - tw) / 2.))
+        i = int(np.round((h - th) / 2.0))
+        j = int(np.round((w - tw) / 2.0))
 
-        return imgs[:, i:i+th, j:j+tw, :]
+        return imgs[:, i : i + th, j : j + tw, :]
 
     def __repr__(self):
-        return self.__class__.__name__ + '(size={0})'.format(self.size)
+        return self.__class__.__name__ + "(size={0})".format(self.size)
 
 
 class RandomHorizontalFlip(object):
@@ -102,7 +103,7 @@ class RandomHorizontalFlip(object):
         return imgs
 
     def __repr__(self):
-        return self.__class__.__name__ + '(p={})'.format(self.p)
+        return self.__class__.__name__ + "(p={})".format(self.p)
 
 
 class ScaledCenterCrop(object):
@@ -110,11 +111,11 @@ class ScaledCenterCrop(object):
         self.size = size
 
     def __call__(self, imgs):
-        #resize = transforms.Resize((self.size, self.size))
+        # resize = transforms.Resize((self.size, self.size))
         resize = lambda x: cv2.resize(x, dsize=(self.size, self.size))
         out = [resize(img) for img in imgs]
         out = np.stack(out)
         return out
 
     def __repr__(self):
-        return self.__class__.__name__ + '(size={})'.format(self.size)
+        return self.__class__.__name__ + "(size={})".format(self.size)

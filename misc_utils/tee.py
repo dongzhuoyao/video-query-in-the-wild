@@ -12,7 +12,7 @@ class StreamToLogger(object):
     def __init__(self, stream, logger, log_level=logging.INFO):
         self.logger = logger
         self.log_level = log_level
-        self.linebuf = ''
+        self.linebuf = ""
         self.stream = stream
 
     def write(self, buf):
@@ -29,15 +29,15 @@ class Tee(object):
         self.filename = filename
         logging.basicConfig(
             level=logging.DEBUG,
-            format='%(asctime)s:%(message)s',
+            format="%(asctime)s:%(message)s",
             filename=filename,
-            filemode='a'
+            filemode="a",
         )
-        stdout_logger = logging.getLogger('STDOUT')
+        stdout_logger = logging.getLogger("STDOUT")
         sl = StreamToLogger(sys.stdout, stdout_logger, logging.INFO)
         sys.stdout = sl
 
-        stderr_logger = logging.getLogger('STDERR')
+        stderr_logger = logging.getLogger("STDERR")
         sl = StreamToLogger(sys.stderr, stderr_logger, logging.ERROR)
         sys.stderr = sl
         print("Logging to file {}".format(filename))

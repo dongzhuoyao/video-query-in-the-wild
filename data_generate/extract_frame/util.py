@@ -13,40 +13,43 @@ import json
 from collections import defaultdict
 import math
 
+
 def generate_classes(data):
     class_list = []
-    for vid, vinfo in data['database'].items():
-        for item in vinfo['annotations']:
-            class_list.append(item['label'])
+    for vid, vinfo in data["database"].items():
+        for item in vinfo["annotations"]:
+            class_list.append(item["label"])
 
     class_list = list(set(class_list))
     class_list = sorted(class_list)
-    classes = {}#{'Background': 0}
-    for i,cls in enumerate(class_list):
-        classes[cls] = i# + 1
+    classes = {}  # {'Background': 0}
+    for i, cls in enumerate(class_list):
+        classes[cls] = i  # + 1
     return classes
+
 
 def generate_segment(split, data, classes, frame_dir):
     segment = {}
     VIDEO_PATH = os.path.join(frame_dir, split)
     video_list = set(os.listdir(VIDEO_PATH))
     # get time windows based on video key
-    for vid, vinfo in data['database'].items():
+    for vid, vinfo in data["database"].items():
         vid_name = [v for v in video_list if vid in v]
         if len(vid_name) == 1:
-            if vinfo['subset'] == split:
+            if vinfo["subset"] == split:
                 # get time windows
                 segment[vid] = []
-                for anno in vinfo['annotations']:
-                    start_time = anno['segment'][0]
-                    end_time = anno['segment'][1]
-                    label = classes[anno['label']]
+                for anno in vinfo["annotations"]:
+                    start_time = anno["segment"][0]
+                    end_time = anno["segment"][1]
+                    label = classes[anno["label"]]
                     segment[vid].append([start_time, end_time, label])
     # sort segments by start_time
     for vid in segment:
         segment[vid].sort(key=lambda x: x[0])
 
     return segment
+
 
 def mkdir(path):
     try:
@@ -55,6 +58,7 @@ def mkdir(path):
         if e.errno != errno.EEXIST:
             raise
 
+
 def rm(path):
     try:
         shutil.rmtree(path)
@@ -62,18 +66,23 @@ def rm(path):
         if e.errno != errno.ENOENT:
             raise
 
+
 def ffmpeg(filename, outfile, fps):
     command = ["ffmpeg", "-i", filename, "-q:v", "1", "-r", str(fps), outfile]
-    pipe = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.STDOUT)
+    pipe = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
     pipe.communicate()
 
-def resize(filename, size = (171, 128)):
+
+def resize(filename, size=(171, 128)):
     img = cv2.imread(filename, 100)
     img2 = cv2.resize(img, size, interpolation=cv2.INTER_LINEAR)
     cv2.imwrite(filename, img2, [100])
 
+
 def duration_analysis(use_per=True):
-    '''
+    """
     seg_dur_counter: segment duration counter
     seg_num_counter: segment number for each video counter
     use_per: user percent format
@@ -345,24 +354,28 @@ def duration_analysis(use_per=True):
     (19, 0.00500150045013504),
     (20, 0.00500150045013504),
     (23, 0.01000300090027008)]
-    '''
-    META_FILE = './activity_net.v1-3.min.json'
+    """
+    META_FILE = "./activity_net.v1-3.min.json"
     data = json.load(open(META_FILE))
     seg_dur_counter = defaultdict(int)
     seg_num_counter = defaultdict(int)
-    for vid, vinfo in data['database'].items():
+    for vid, vinfo in data["database"].items():
         seg_num = 0
-        for anno in vinfo['annotations']:
-            start_time = anno['segment'][0]
-            end_time = anno['segment'][1]
-            dur = round(end_time-start_time)
+        for anno in vinfo["annotations"]:
+            start_time = anno["segment"][0]
+            end_time = anno["segment"][1]
+            dur = round(end_time - start_time)
             seg_dur_counter[dur] += 1
             seg_num += 1
-        seg_num_counter[seg_num] += 1  
+        seg_num_counter[seg_num] += 1
 
-        if use_per:      
+        if use_per:
             seg_num = sum(seg_dur_counter.values())
-            seg_dur_counter = {k+0.5:100.0*v/seg_num for k,v in seg_dur_counter.items()}
+            seg_dur_counter = {
+                k + 0.5: 100.0 * v / seg_num for k, v in seg_dur_counter.items()
+            }
             vid_num = sum(seg_num_counter.values())
-            seg_num_counter = {k:100.0*v/vid_num for k,v in seg_num_counter.items()}
+            seg_num_counter = {
+                k: 100.0 * v / vid_num for k, v in seg_num_counter.items()
+            }
     return sorted(seg_dur_counter.items()), sorted(seg_num_counter.items())

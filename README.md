@@ -15,10 +15,10 @@
 - ~~flexible evaluation, change class_split~~
 - ~~seriously, eval_split: no hacking, real validation and testing subset utilization~~
 - ~~flexible dataset root, remove tao~~
-- try memory ratio 0.999
-- novelty gain check(long time task)
 - extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
 - NMS in Moment Retrieval
+- try memory ratio 0.999
+- novelty gain check(long time task)
 - ~~visual bank implementation check~~
 - ~~"noisy"->"distractor"~~
 - consider more baseline in https://arxiv.org/pdf/1912.04486.pdf

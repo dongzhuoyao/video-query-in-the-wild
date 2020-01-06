@@ -13,6 +13,7 @@ def seed(manualseed):
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
+
     def __init__(self):
         self.reset()
 
@@ -55,11 +56,10 @@ class MedianMeter(AverageMeter):
 
 def submission_file(ids, outputs, filename):
     """ write list of ids and outputs to filename"""
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         for vid, output in zip(ids, outputs):
-            scores = ['{:g}'.format(x)
-                      for x in output]
-            f.write('{} {}\n'.format(vid, ' '.join(scores)))
+            scores = ["{:g}".format(x) for x in output]
+            f.write("{} {}\n".format(vid, " ".join(scores)))
 
 
 class Timer(AverageMeter):

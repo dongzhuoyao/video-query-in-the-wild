@@ -15,27 +15,31 @@ def ensure_dir(file_path):
 
 
 def save_image(npdata, outfilename):
-    img = Image.fromarray(np.asarray(np.clip(npdata, 0, 255), dtype="uint8"), "L")
+    img = Image.fromarray(
+        np.asarray(np.clip(npdata, 0, 255), dtype="uint8"), "L"
+    )
     img.save(outfilename)
 
 
 def heatim(original, overlay):
-    heat_img = plt.cm.jet(overlay/np.max(overlay))[:, :, :3]
+    heat_img = plt.cm.jet(overlay / np.max(overlay))[:, :, :3]
     out = np.copy(original)
     avg = np.mean(original, axis=2)
     out[:, :, 0] = avg
     out[:, :, 1] = avg
     out[:, :, 2] = avg
-    out = out*.5+heat_img*.3
+    out = out * 0.5 + heat_img * 0.3
     return out
 
 
 def arrtoim(arr):
-    return Image.fromarray(np.asarray(np.clip(arr*255., 0, 255), dtype="uint8"), "RGB")
+    return Image.fromarray(
+        np.asarray(np.clip(arr * 255.0, 0, 255), dtype="uint8"), "RGB"
+    )
 
 
 def imtoarr(im):
-    return np.asarray(np.asarray(im, dtype="int32"), dtype="float")/255.
+    return np.asarray(np.asarray(im, dtype="int32"), dtype="float") / 255.0
 
 
 def normalize_arr(arr):
@@ -44,7 +48,7 @@ def normalize_arr(arr):
     return arr
 
 
-def tensor_as_image(tensor, filename='debug.png'):
+def tensor_as_image(tensor, filename="debug.png"):
     data = tensor.cpu().numpy().copy()
     data = data.swapaxes(0, 2).swapaxes(0, 1)
     data = normalize_arr(data)
@@ -54,7 +58,9 @@ def tensor_as_image(tensor, filename='debug.png'):
 def mem_report():
     for obj in gc.get_objects():
         try:
-            if torch.is_tensor(obj) or (hasattr(obj, 'data') and torch.is_tensor(obj.data)):
+            if torch.is_tensor(obj) or (
+                hasattr(obj, "data") and torch.is_tensor(obj.data)
+            ):
                 print(type(obj), obj.size(), obj.device.index)
         except Exception as e:
             print(e)
@@ -66,24 +72,24 @@ def cpu_stats():
     print(psutil.virtual_memory())  # physical memory usage
     pid = os.getpid()
     py = psutil.Process(pid)
-    memory_use = py.memory_info()[0] / 2. ** 30  # memory use in GB...I think
-    print('memory GB:', memory_use)
+    memory_use = py.memory_info()[0] / 2.0 ** 30  # memory use in GB...I think
+    print("memory GB:", memory_use)
 
 
 def mem_report2():
-    '''Report the memory usage of the tensor.storage in pytorch
-    Both on CPUs and GPUs are reported'''
+    """Report the memory usage of the tensor.storage in pytorch
+    Both on CPUs and GPUs are reported"""
 
     def _mem_report(tensors, mem_type):
-        '''Print the selected tensors of type
+        """Print the selected tensors of type
         There are two major storage types in our major concern:
             - GPU: tensors transferred to CUDA devices
             - CPU: tensors remaining on the system memory (usually unimportant)
         Args:
             - tensors: the tensors of specified type
-            - mem_type: 'CPU' or 'GPU' in current implementation '''
-        print('Storage on %s' %(mem_type))
-        print('-'*LEN)
+            - mem_type: 'CPU' or 'GPU' in current implementation """
+        print("Storage on %s" % (mem_type))
+        print("-" * LEN)
         total_numel = 0
         total_mem = 0
         visited_data = []
@@ -99,26 +105,26 @@ def mem_report2():
             numel = tensor.storage().size()
             total_numel += numel
             element_size = tensor.storage().element_size()
-            mem = numel*element_size /1024/1024 # 32bit=4Byte, MByte
+            mem = numel * element_size / 1024 / 1024  # 32bit=4Byte, MByte
             total_mem += mem
             element_type = type(tensor).__name__
             size = tuple(tensor.size())
 
-            print('%s\t\t%s\t\t%.2f' % (
-                element_type,
-                size,
-                mem) )
-        print('-'*LEN)
-        print('Total Tensors: %d \tUsed Memory Space: %.2f MBytes' % (total_numel, total_mem) )
-        print('-'*LEN)
+            print("%s\t\t%s\t\t%.2f" % (element_type, size, mem))
+        print("-" * LEN)
+        print(
+            "Total Tensors: %d \tUsed Memory Space: %.2f MBytes"
+            % (total_numel, total_mem)
+        )
+        print("-" * LEN)
 
     LEN = 65
-    print('='*LEN)
+    print("=" * LEN)
     objects = gc.get_objects()
-    print('%s\t%s\t\t\t%s' %('Element type', 'Size', 'Used MEM(MBytes)') )
+    print("%s\t%s\t\t\t%s" % ("Element type", "Size", "Used MEM(MBytes)"))
     tensors = [obj for obj in objects if torch.is_tensor(obj)]
     cuda_tensors = [t for t in tensors if t.is_cuda]
     host_tensors = [t for t in tensors if not t.is_cuda]
-    _mem_report(cuda_tensors, 'GPU')
-    #_mem_report(host_tensors, 'CPU')
-    print('='*LEN)
+    _mem_report(cuda_tensors, "GPU")
+    # _mem_report(host_tensors, 'CPU')
+    print("=" * LEN)

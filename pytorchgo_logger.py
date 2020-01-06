@@ -11,20 +11,31 @@ from datetime import datetime
 from six.moves import input
 import sys
 
-__all__ = ['set_logger_dir', 'auto_set_dir', 'get_logger_dir']
+__all__ = ["set_logger_dir", "auto_set_dir", "get_logger_dir"]
 
 
 class _MyFormatter(logging.Formatter):
     def format(self, record):
-        date = colored('[%(asctime)s @%(filename)s:%(lineno)d]', 'green')
-        msg = '%(message)s'
+        date = colored("[%(asctime)s @%(filename)s:%(lineno)d]", "green")
+        msg = "%(message)s"
         if record.levelno == logging.WARNING:
-            fmt = date + ' ' + colored('WRN', 'red', attrs=['blink']) + ' ' + msg
-        elif record.levelno == logging.ERROR or record.levelno == logging.CRITICAL:
-            fmt = date + ' ' + colored('ERR', 'red', attrs=['blink', 'underline']) + ' ' + msg
+            fmt = (
+                date + " " + colored("WRN", "red", attrs=["blink"]) + " " + msg
+            )
+        elif (
+            record.levelno == logging.ERROR
+            or record.levelno == logging.CRITICAL
+        ):
+            fmt = (
+                date
+                + " "
+                + colored("ERR", "red", attrs=["blink", "underline"])
+                + " "
+                + msg
+            )
         else:
-            fmt = date + ' ' + msg
-        if hasattr(self, '_style'):
+            fmt = date + " " + msg
+        if hasattr(self, "_style"):
             # Python3 compatibilty
             self._style._fmt = fmt
         self._fmt = fmt
@@ -32,17 +43,26 @@ class _MyFormatter(logging.Formatter):
 
 
 def _getlogger():
-    logger = logging.getLogger('tensorpack')
+    logger = logging.getLogger("tensorpack")
     logger.propagate = False
     logger.setLevel(logging.INFO)
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(_MyFormatter(datefmt='%m%d %H:%M:%S'))
+    handler.setFormatter(_MyFormatter(datefmt="%m%d %H:%M:%S"))
     logger.addHandler(handler)
     return logger
 
 
 _logger = _getlogger()
-_LOGGING_METHOD = ['info', 'warning', 'error', 'critical', 'warn', 'exception', 'debug', 'setLevel']
+_LOGGING_METHOD = [
+    "info",
+    "warning",
+    "error",
+    "critical",
+    "warn",
+    "exception",
+    "debug",
+    "setLevel",
+]
 # export logger functions
 for func in _LOGGING_METHOD:
     locals()[func] = getattr(_logger, func)
@@ -50,7 +70,7 @@ for func in _LOGGING_METHOD:
 
 
 def _get_time_str():
-    return datetime.now().strftime('%m%d-%H%M%S')
+    return datetime.now().strftime("%m%d-%H%M%S")
 
 
 # logger file and directory:
@@ -62,16 +82,17 @@ _FILE_HANDLER = None
 def _set_file(path):
     global _FILE_HANDLER
     if os.path.isfile(path):
-        backup_name = path + '.' + _get_time_str()
+        backup_name = path + "." + _get_time_str()
         shutil.move(path, backup_name)
-        _logger.info("Existing log file '{}' backuped to '{}'".format(path, backup_name))  # noqa: F821
-    hdl = logging.FileHandler(
-        filename=path, encoding='utf-8', mode='w')
-    hdl.setFormatter(_MyFormatter(datefmt='%m%d %H:%M:%S'))
+        _logger.info(
+            "Existing log file '{}' backuped to '{}'".format(path, backup_name)
+        )  # noqa: F821
+    hdl = logging.FileHandler(filename=path, encoding="utf-8", mode="w")
+    hdl.setFormatter(_MyFormatter(datefmt="%m%d %H:%M:%S"))
 
     _FILE_HANDLER = hdl
     _logger.addHandler(hdl)
-    _logger.info("Argv: " + ' '.join(sys.argv))
+    _logger.info("Argv: " + " ".join(sys.argv))
 
 
 def set_logger_dir(dirname, action=None):
@@ -100,24 +121,36 @@ def set_logger_dir(dirname, action=None):
         del _FILE_HANDLER
     if os.path.isdir(dirname) and len(os.listdir(dirname)):
         if not action:
-            _logger.warn("""\
-Log directory {} exists! Use 'd' to delete it. """.format(dirname))
-            _logger.warn("""\
+            _logger.warn(
+                """\
+Log directory {} exists! Use 'd' to delete it. """.format(
+                    dirname
+                )
+            )
+            _logger.warn(
+                """\
 If you're resuming from a previous run, you can choose to keep it.
-Press any other key to exit. """)
+Press any other key to exit. """
+            )
         while not action:
-            action = input("Select Action: k (keep) / d (delete) / q (quit):").lower().strip()
+            action = (
+                input("Select Action: k (keep) / d (delete) / q (quit):")
+                .lower()
+                .strip()
+            )
         act = action
-        if act == 'b':
+        if act == "b":
             backup_name = dirname + _get_time_str()
             shutil.move(dirname, backup_name)
-            info("Directory '{}' backuped to '{}'".format(dirname, backup_name))  # noqa: F821
-        elif act == 'd':
+            info(
+                "Directory '{}' backuped to '{}'".format(dirname, backup_name)
+            )  # noqa: F821
+        elif act == "d":
             shutil.rmtree(dirname)
-        elif act == 'n':
+        elif act == "n":
             dirname = dirname + _get_time_str()
             info("Use a new log directory {}".format(dirname))  # noqa: F821
-        elif act == 'k':
+        elif act == "k":
             pass
         else:
             raise OSError("Directory {} exits!".format(dirname))
@@ -129,27 +162,26 @@ Press any other key to exit. """)
             dirname(str):
         """
         assert dirname is not None
-        if dirname == '' or os.path.isdir(dirname):
+        if dirname == "" or os.path.isdir(dirname):
             return
         try:
             os.makedirs(dirname)
         except OSError as e:
-                raise e
-
+            raise e
 
     mkdir_p(dirname)
-    _set_file(os.path.join(dirname, 'log.log'))
+    _set_file(os.path.join(dirname, "log.log"))
 
 
 def auto_set_dir(action=None, name=None):
     """
     Use :func:`logger.set_logger_dir` to set log directory to
     "./train_log/{scriptname}:{name}". "scriptname" is the name of the main python file currently running"""
-    mod = sys.modules['__main__']
+    mod = sys.modules["__main__"]
     basename = os.path.basename(mod.__file__)
-    auto_dirname = os.path.join('train_log', basename[:basename.rfind('.')])
+    auto_dirname = os.path.join("train_log", basename[: basename.rfind(".")])
     if name:
-        auto_dirname += ':%s' % name
+        auto_dirname += ":%s" % name
     set_logger_dir(auto_dirname, action=action)
 
 
