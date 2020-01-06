@@ -701,7 +701,7 @@ class ARV_Retrieval_Clip:
                 total=len(self.gallery_list),
                 desc="eval_clips, extracting gallery feat",
             ):
-                if self.args.debug and proceeded_id > debug_iter * 10:
+                if self.args.debug and proceeded_id > debug_iter *1:
                     break
                 start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(
                     _g
@@ -800,7 +800,7 @@ class ARV_Retrieval_Clip:
             for i, _g in tqdm(
                 enumerate(self.gallery_list), desc="compute potential tIoU"
             ):
-                if self.args.debug and i > debug_iter * 10:
+                if self.args.debug and i > debug_iter * 1:
                     break
                 self.tmp_gallery.extend(garner_feat(_g))
             self.gallery_list = self.tmp_gallery
@@ -853,7 +853,7 @@ class ARV_Retrieval_Clip:
             self.query_list = [[i] for i in self.query_list]
         else:
             self.query_list = generate_multi_query(self.query_list)
-        self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
+        #self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
         self.class_map_evaluation = evaluation_metric(
             self.args, self.query_list
         )
@@ -1011,7 +1011,7 @@ class ARV_Retrieval_Moment:
                 total=len(self.gallery_list),
                 desc="eval_moment, extracting gallery feat",
             ):
-                if self.args.debug and proceeded_id > debug_iter * 10:
+                if self.args.debug and proceeded_id > debug_iter * 1:
                     break
                 start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(
                     _g
@@ -1120,7 +1120,7 @@ class ARV_Retrieval_Moment:
             for i, _g in tqdm(
                 enumerate(self.gallery_list), desc="compute potential tIoU"
             ):  # time-consuming
-                if self.args.debug and i > debug_iter * 10:
+                if self.args.debug and i > debug_iter * 1:
                     break
                 moments = garner_feat(_g)
                 moment_total.append(len(moments))
