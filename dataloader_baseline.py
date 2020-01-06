@@ -1180,7 +1180,7 @@ class ARV_Retrieval_Moment:
         else:
             self.query_list = generate_multi_query(self.query_list)
 
-        self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
+        #self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
         self.class_map_evaluation05 = evaluation_metric(
             self.args, self.query_list
         )
