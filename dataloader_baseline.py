@@ -11,7 +11,7 @@ from misc_utils import (
 from sklearn.metrics import average_precision_score
 import faiss
 from scipy import stats
-from misc_utils.model_utils import nms_cpu
+from misc_utils.utils_models import nms_cpu
 
 fps = 3
 debug_iter = 30
@@ -20,7 +20,7 @@ NOISE_LABEL = "distractor_activity"
 RETRIEVAL_TYPE_NOISE = "noise"
 
 
-from misc_utils.dongzhuoyao_utils import (
+from misc_utils.utils_dataset import (
     fps,
     noisy_label,
     activtynet_fps3_path,
@@ -98,7 +98,7 @@ class VRActivityNet(data.Dataset):
     def sanity_check(self):
         for cls_name in self.data_dict[self.split]:
             _new_list = []
-            _removed_dict = {}
+            _removed_set = set()
             for d in self.data_dict[self.split][cls_name]:
                 activitynet_subset = d["activitynet_subset"]
                 video_id = d["video_id"]
@@ -109,11 +109,11 @@ class VRActivityNet(data.Dataset):
                 ):
                     _new_list.append(d)
                     continue
-                _removed_dict[video_id] = "shit"
+                _removed_set.add(video_id)
             self.data_dict[self.split][cls_name] = _new_list
-        print(
+        logger.warning(
             "sanity check, removing {} items".format(
-                len(list(_removed_dict.keys()))
+                len(_removed_set)
             )
         )
 
@@ -121,7 +121,7 @@ class VRActivityNet(data.Dataset):
         self.data_dict = json.load(
             open(dataset_config[self.args.meta_split]["json_path"])
         )
-        print("load data done.")
+        logger.info("load data done.")
         new_dict = {}
         self.cur_label_list = []
         for cls_name, item_list in self.data_dict[self.split].items():
@@ -135,8 +135,7 @@ class VRActivityNet(data.Dataset):
             else:  # only keep minimal novel class
                 new_dict[cls_name] = item_list[: self.novel_num]
             self.cur_label_list.append(cls_name)
-            if "noisy" in cls_name:
-                print("a")
+
 
         self.data_dict[self.split] = new_dict  # remove novel and noisy label
         self.cls2int = {label: i for i, label in enumerate(self.cur_label_list)}
@@ -509,17 +508,17 @@ class evaluation_metric:
             self.novel_retrieval_top[str(_thres)] = Average(
                 self.novel_retrieval_top[str(_thres)]
             )
-            logger.warning(
+            logger.info(
                 "1-order R@{}={}".format(
                     str(_thres), self.full_retrieval_top[str(_thres)]
                 )
             )
-            logger.warning(
+            logger.info(
                 "1-order base R@{}={}".format(
                     str(_thres), self.base_retrieval_top[str(_thres)]
                 )
             )
-            logger.warning(
+            logger.info(
                 "1-order novel R@{}={}".format(
                     str(_thres), self.novel_retrieval_top[str(_thres)]
                 )
@@ -551,14 +550,14 @@ class evaluation_metric:
                 ]
             )
 
-            logger.warning("2-order R@{}={}".format(str(_thres), avg_recall))
-            logger.warning(
+            logger.info("2-order R@{}={}".format(str(_thres), avg_recall))
+            logger.info(
                 "2-order base R@{}={}".format(str(_thres), base_recall)
             )
-            logger.warning(
+            logger.info(
                 "2-order novel R@{}={}".format(str(_thres), novel_recall)
             )
-            logger.warning("-" * 30)
+            logger.info("-" * 30)
 
         ################
         base_ap_list = []
@@ -1135,7 +1134,7 @@ class ARV_Retrieval_Moment:
                             moment_start_sec,
                             moment_start_sec + moment_duration_sec,
                         ]
-                        # print(loc_sec)
+
                         if loc_feat[1] > feat_length:
                             continue
 

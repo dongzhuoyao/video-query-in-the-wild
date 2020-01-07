@@ -5,7 +5,7 @@ from bdb import BdbQuit
 import traceback
 import sys
 from misc_utils import pytorchgo_logger as logger
-from misc_utils.pytorch_util import model_summary, optimizer_summary, set_gpu
+from misc_utils.utils_torch import model_summary, optimizer_summary, set_gpu
 
 import cv2
 import torch.nn as nn
