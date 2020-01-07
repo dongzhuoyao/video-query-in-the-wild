@@ -30,16 +30,48 @@ from misc_utils.dongzhuoyao_utils import (
 )
 
 
-class FeatureExtractionDataset(data.Dataset):
-    def __init__(self):
-        pass
-        self.long_videos = list()
+class LongVideoDataset(data.Dataset):
+    def __init__(self,gallery_list, test_frame_num, input_size):
+        self.long_videos = gallery_list
+        self.test_frame_num = test_frame_num
+        self.video_list = []
+        self.meta_list = []
+        self.input_size = input_size
+        for long_id, _g in enumerate(self.long_videos):
+            start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(
+                _g
+            )
+            chunk_list = list(
+                chunks(
+                    list(range(activitynet_frame_num)), self.test_frame_num
+                )
+            )
+            for idx, chunk in enumerate(chunk_list):
+                video_dict = dict(frame_path=frame_path, start_frame_idx=chunk[0], gt_frame_num=len(chunk), train_frame_num = self.test_frame_num, activitynet_frame_num=activitynet_frame_num)
+                self.video_list.append(video_dict)
+                self.meta_list.append(dict(long_video_id=long_id, seg_id=idx))
+
+
 
     def __getitem__(self, index):
-        return None
+                video_dict = self.video_list[index]
+                images = read_video(
+                    frame_path=video_dict['frame_path'],
+                    start_frame_idx=video_dict['start_frame_idx'],
+                    gt_frame_num=video_dict['gt_frame_num'],
+                    train_frame_num=video_dict['train_frame_num'],
+                    video_transform=transforms.Compose(
+                        [videotransforms.CenterCrop(self.input_size)]
+                    ),
+                    activitynet_frame_num=video_dict['activitynet_frame_num'],
+                )
+                images = torch.from_numpy(images).float()
+                assert images.shape[0] == self.test_frame_num
+                return images, self.meta_list[index]
 
     def __len__(self):
-        return None
+        return len(self.video_list)
+
 
 
 
@@ -710,54 +742,44 @@ class ARV_Retrieval_Clip:
                 if q["label"] in self.possible_classes:
                     self.query_list.append(q)
 
-            for proceeded_id, _g in tqdm(
-                enumerate(self.gallery_list),
-                total=len(self.gallery_list),
-                desc="eval_clips, extracting gallery feat",
+
+            _loader = torch.utils.data.DataLoader(
+                LongVideoDataset(gallery_list=self.gallery_list,input_size=self.input_size, test_frame_num=self.test_frame_num),
+                batch_size=self.test_batch_size,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.args.workers,
+                pin_memory=False,
+            )
+            feat_dict = dict()
+            for proceeded_id, data in tqdm(
+                    enumerate(_loader),
+                    total=len(_loader),
+                    desc="eval_clips, extracting gallery feat",
             ):
                 if self.args.debug and proceeded_id > debug_iter * 1:
                     break
-                start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(
-                    _g
-                )
-                chunk_list = list(
-                    chunks(
-                        list(range(activitynet_frame_num)), self.test_frame_num
-                    )
-                )
-                feats_list = []
-                for idxx, data_batch in enumerate(chunk_list):
-                    if not self.args.memory_leak_debug:
-                        images = read_video(
-                            frame_path=frame_path,
-                            start_frame_idx=data_batch[0],
-                            gt_frame_num=len(data_batch),
-                            train_frame_num=self.test_frame_num,
-                            video_transform=transforms.Compose(
-                                [videotransforms.CenterCrop(self.input_size)]
-                            ),
-                            activitynet_frame_num=activitynet_frame_num,
-                        )
-                        images = torch.from_numpy(images).float().unsqueeze(0)
-                        assert images.shape[1] == self.test_frame_num
-                        _feats = self.feat_extract_func(images)  # [B,C,T]
-                    else:
-                        _feats = np.random.rand(
-                            1, self.feat_dim, self.test_frame_num
-                        ).astype(np.float32)
-                    _feats = _feats[0][
-                        :, : len(data_batch)
-                    ]  # truncate when meeting last clip of the long video
-                    feats_list.append(_feats)
-                _feats = np.concatenate(feats_list, axis=1)
-                assert (
-                    _feats.shape[1]
-                    == activitynet_frame_num // self.temporal_stride
-                ), "{} not equal to {}".format(
-                    _feats.shape[1],
-                    activitynet_frame_num // self.temporal_stride,
-                )
-                self.gallery_list[proceeded_id]["feat"] = _feats  # [C,T]
+                images, meta = data
+                if not self.args.memory_leak_debug:
+                    _feats = self.feat_extract_func(images)  # [B,C,T]
+                else:
+                    _feats = np.random.rand(
+                        self.test_batch_size, self.feat_dim, self.test_frame_num
+                    ).astype(np.float32)
+                long_video_ids = meta['long_video_id'].numpy().tolist()
+                seg_ids = meta['seg_id'].numpy().tolist()
+                for _, (long_video_id, seg_id) in enumerate(zip(long_video_ids, seg_ids)):
+                    if long_video_id not in feat_dict:
+                        feat_dict[long_video_id] = dict()
+                    feat_dict[long_video_id][seg_id] = _feats[_]
+
+            for _long_video_id in list(feat_dict.keys()):
+                segs = feat_dict[_long_video_id]
+                _feattt = []
+                for seg_id in list(segs.keys()):
+                    _feattt.append(segs[seg_id])
+                _feattt = np.concatenate(_feattt, axis=1)
+                self.gallery_list[_long_video_id]["feat"] = _feattt  # [C,T]
 
             self.gallery_list = [
                 g for g in self.gallery_list if "feat" in g
@@ -1020,50 +1042,44 @@ class ARV_Retrieval_Moment:
                     self.query_list.append(q)
 
             ### extract feature for gallery video #####
-            for proceeded_id, _g in tqdm(
-                enumerate(self.gallery_list),
-                total=len(self.gallery_list),
-                desc="eval_moment, extracting gallery feat",
+            _loader = torch.utils.data.DataLoader(
+                LongVideoDataset(gallery_list=self.gallery_list, input_size=self.input_size,
+                                 test_frame_num=self.test_frame_num),
+                batch_size=self.test_batch_size,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.args.workers,
+                pin_memory=False,
+            )
+            feat_dict = dict()
+            for proceeded_id, data in tqdm(
+                    enumerate(_loader),
+                    total=len(_loader),
+                    desc="eval_clips, extracting gallery feat",
             ):
                 if self.args.debug and proceeded_id > debug_iter * 1:
                     break
-                start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(
-                    _g
-                )
-                chunk_list = list(
-                    chunks(
-                        list(range(activitynet_frame_num)), self.test_frame_num
-                    )
-                )
-                feats_list = []
-                for idxx, data_batch in enumerate(chunk_list):
-                    if self.args.memory_leak_debug:
-                        _feats = np.random.rand(
-                            1, self.feat_dim, self.test_frame_num
-                        ).astype(np.float32)
-                    else:
-                        images = read_video(
-                            frame_path=frame_path,
-                            start_frame_idx=data_batch[0],
-                            gt_frame_num=len(data_batch),
-                            train_frame_num=self.test_frame_num,
-                            video_transform=transforms.Compose(
-                                [videotransforms.CenterCrop(self.input_size)]
-                            ),
-                            activitynet_frame_num=activitynet_frame_num,
-                        )
-                        images = torch.from_numpy(images).float().unsqueeze(0)
-                        _feats = self.feat_extract_func(images)
-                    _feats = _feats[0][
-                        :, : len(data_batch)
-                    ]  # truncate when meeting last clip of the long video
-                    feats_list.append(_feats)
-                _feats = np.concatenate(feats_list, axis=1)
-                assert (
-                    _feats.shape[1]
-                    == activitynet_frame_num // self.temporal_stride
-                )
-                self.gallery_list[proceeded_id]["feat"] = _feats  # [T,C]
+                images, meta = data
+                if not self.args.memory_leak_debug:
+                    _feats = self.feat_extract_func(images)  # [B,C,T]
+                else:
+                    _feats = np.random.rand(
+                        self.test_batch_size, self.feat_dim, self.test_frame_num
+                    ).astype(np.float32)
+                long_video_ids = meta['long_video_id'].numpy().tolist()
+                seg_ids = meta['seg_id'].numpy().tolist()
+                for _, (long_video_id, seg_id) in enumerate(zip(long_video_ids, seg_ids)):
+                    if long_video_id not in feat_dict:
+                        feat_dict[long_video_id] = dict()
+                    feat_dict[long_video_id][seg_id] = _feats[_]
+
+            for _long_video_id in list(feat_dict.keys()):
+                segs = feat_dict[_long_video_id]
+                _feattt = []
+                for seg_id in list(segs.keys()):
+                    _feattt.append(segs[seg_id])
+                _feattt = np.concatenate(_feattt, axis=1)
+                self.gallery_list[_long_video_id]["feat"] = _feattt  # [C,T]
 
             def garner_feat(_g, clip_length_sec=5, max_clip_per_moment=26):
                 feat_length = _g["feat"].shape[1]
