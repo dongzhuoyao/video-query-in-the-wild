@@ -154,7 +154,7 @@ import torch
 
 
 def nms_cpu(dets, thresh):
-    dets = dets.numpy()
+    #dets = dets.numpy()
     x1 = dets[:, 0]
     x2 = dets[:, 1]
     scores = dets[:, 2]
@@ -174,4 +174,4 @@ def nms_cpu(dets, thresh):
 
         inds = np.where(ovr < thresh)[0]
         order = order[inds + 1]
-    return torch.LongTensor(keep)
+    return keep#torch.LongTensor(keep)

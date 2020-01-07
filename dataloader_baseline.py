@@ -11,6 +11,7 @@ from misc_utils import (
 from sklearn.metrics import average_precision_score
 import faiss
 from scipy import stats
+from misc_utils.model_utils import nms_cpu
 
 fps = 3
 debug_iter = 30
@@ -1197,22 +1198,20 @@ class ARV_Retrieval_Moment:
                 assert query["retrieval_type"] != RETRIEVAL_TYPE_NOISE
                 gt_label = query["label"]
                 single_query_hit = list()
-                for idx, candidate in enumerate(self.gallery_list):
+                for idx, candidate in enumerate(self.gallery_list):#construct single_query_list
                     closest_hit = candidate["closest_hit"]
-                    scored_dict = {}
-                    scored_dict["gt_label"] = gt_label
-
-                    iou = 0
-
+                    scored_dict = dict(gt_label=gt_label,video_id=candidate["video_id"],
+                                       start_sec=candidate['start_sec'],
+                                       end_sec=candidate['end_sec'])
                     if closest_hit is not None and closest_hit["label"] == gt_label:
-                        iou = closest_hit["iou"]
-                    scored_dict["iou"] = iou
+                        scored_dict["iou"] = closest_hit["iou"]
+                    else:
+                        scored_dict["iou"] = 0
 
                     if candidate["video_id"] in ignore_videoid_list:
                         scored_dict["ignore"] = True
                     else:
                         scored_dict["ignore"] = False
-
                     single_query_hit.append(scored_dict)
 
                 query_feat = 0
@@ -1235,13 +1234,28 @@ class ARV_Retrieval_Moment:
                     )  # ranking
                 single_query_hit = tmp_single_query_hit
 
-                # dongzhuoyao,TODO, can do NMS after thresholding.
-                # cluster
-                # nms
-                # concatenate
-                def do_nms():
+                def do_nms(nms_threshold=0.5):
+                    #cluster
+                    clusters = dict()
+                    for s in single_query_hit:
+                        if s['video_id'] in clusters:
+                            clusters[s['video_id']].append(s)
+                        else:
+                            clusters[s['video_id']] = [s]
+                    #nms per cluster center
+                    result_list = []
+                    for video_id, _list in clusters.items():
+                        #construct numpy array
+                        np_list = []
+                        for _element in _list:
+                            np_list.append(np.array([_element['start_sec'],_element['end_sec'],_element['score']]).reshape(1,3))
+                        np_list = np.concatenate(np_list,axis=0)
+                        keep = nms_cpu(np_list,thresh=nms_threshold)
+                        _list = [ele for idx,ele in enumerate(_list) if idx in keep]
+                        result_list.extend(_list)
+                    return result_list
 
-
+                single_query_hit = do_nms()
                 for s in single_query_hit:
                     if s["iou"] >= 0.5:
                         s["tp"] = 1
