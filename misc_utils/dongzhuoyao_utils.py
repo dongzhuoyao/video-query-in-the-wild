@@ -7,9 +7,7 @@ import data_generate
 
 fps = 3
 noisy_label = "distractor_activity"
-activtynet_fps3_path = "/home/tao/dataset/v1-3/mkv_train_val_frames_3".replace(
-    "tao", getpass.getuser()
-)
+activtynet_fps3_path = "data/activitynet1.3_train_val_frames_fps3"
 
 
 dataset_config = {

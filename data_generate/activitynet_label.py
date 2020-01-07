@@ -200,6 +200,7 @@ activitynet_label_list = [
     "Getting a tattoo",
     "Playing ice hockey",
 ]
+# activitynet_label_list = [w.lower() for w in activitynet_label_list]
 
 arv_train_label = activitynet_label_list[:140]
 arv_val_label = activitynet_label_list[140:160]
