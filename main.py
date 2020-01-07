@@ -38,7 +38,7 @@ from dataloader_baseline import (
 init_lr = 1e-4
 eval_per = 15
 lr_decay_rate = "90"
-epochs = 2  # 150
+epochs = 150
 batch_size = 10
 test_batch_size = 10 * 3
 triplet_margin = 1
@@ -157,6 +157,9 @@ def parse():
     parser.add_argument("--moving_average", default=moving_average, type=int)
 
     args = parser.parse_args()
+
+    if args.debug:
+        args.epochs = 2
 
     args.pretrained = pretrained
     args.logger_dir = "train_log/{}_{}_novel{}_mv{}".format(

@@ -904,7 +904,7 @@ class ARV_Retrieval_Clip:
             tmp_single_query_hit = []
             for j in range(I.shape[0]):
                 _j_th = I[j]
-                single_query_hit[_j_th]["score"] = -D[j]
+                single_query_hit[_j_th]["score"] = -float(D[j])
                 tmp_single_query_hit.append(single_query_hit[_j_th])  # ranking
             single_query_hit = tmp_single_query_hit
 
@@ -1056,26 +1056,23 @@ class ARV_Retrieval_Moment:
                 r_list = []
                 annotations = _g["annotations"]
 
-                def cal_iou(min1, max1, min2, max2):
+                def calculate_iou(min1, max1, min2, max2):
                     overlap = max(0, min(max1, max2) - max(min1, min2))
                     return overlap * 1.0 / (max(max2, max1) - min(min1, min2))
 
-                def cal_hit(loc_sec):
+                def calculate_closest_hit(loc_sec):
                     best_iou = -1
                     best_result = None
                     for ann in annotations:
                         seg = ann["segment"]
                         label = ann["label"]
-                        iou = cal_iou(seg[0], seg[1], loc_sec[0], loc_sec[1])
+                        iou = calculate_iou(seg[0], seg[1], loc_sec[0], loc_sec[1])
                         if iou > best_iou and label in self.possible_classes:
                             best_result = dict(
                                 iou=iou, label=label, gt=seg, pred=loc_sec
                             )
                             best_iou = iou
-                    if best_iou == -1:
-                        return []
-                    else:
-                        return [best_result]
+                    return best_result
 
                 for clips_per_moment in range(1, max_clip_per_moment + 1):
                     for moment_start_sec in range(
@@ -1109,7 +1106,7 @@ class ARV_Retrieval_Moment:
                                 video_id=_g["video_id"],
                                 start_sec=moment_start_sec,
                                 end_sec=moment_start_sec + moment_duration_sec,
-                                hit_list=cal_hit(loc_sec),
+                                closest_hit=calculate_closest_hit(loc_sec),
                             )
                         )
                 return r_list
@@ -1150,10 +1147,9 @@ class ARV_Retrieval_Moment:
         logger.warning("check class completeness.")
         complete_dict = dict.fromkeys(self.possible_classes, 0)
         for can in self.gallery_list:
-            if len(can["hit_list"]) == 0:
+            if can["closest_hit"] is None:
                 continue
-            for hit_list in can["hit_list"]:
-                complete_dict[hit_list["label"]] += 1
+            complete_dict[can["closest_hit"]["label"]] += 1
         if not self.args.debug:
             for key, value in complete_dict.items():
                 assert value > 0, "{} doesn't exist in gallery!".format(key)
@@ -1202,14 +1198,14 @@ class ARV_Retrieval_Moment:
                 gt_label = query["label"]
                 single_query_hit = list()
                 for idx, candidate in enumerate(self.gallery_list):
-                    hit_list = candidate["hit_list"]
+                    closest_hit = candidate["closest_hit"]
                     scored_dict = {}
                     scored_dict["gt_label"] = gt_label
 
                     iou = 0
-                    assert len(hit_list) <= 1
-                    if len(hit_list) == 1 and hit_list[0]["label"] == gt_label:
-                        iou = hit_list[0]["iou"]
+
+                    if closest_hit is not None and closest_hit["label"] == gt_label:
+                        iou = closest_hit["iou"]
                     scored_dict["iou"] = iou
 
                     if candidate["video_id"] in ignore_videoid_list:
@@ -1233,7 +1229,7 @@ class ARV_Retrieval_Moment:
                 tmp_single_query_hit = []
                 for j in range(I.shape[0]):
                     _j_th = I[j]
-                    single_query_hit[_j_th]["score"] = -D[j]
+                    single_query_hit[_j_th]["score"] = -float(D[j])
                     tmp_single_query_hit.append(
                         single_query_hit[_j_th]
                     )  # ranking
@@ -1243,6 +1239,8 @@ class ARV_Retrieval_Moment:
                 # cluster
                 # nms
                 # concatenate
+                def do_nms():
+
 
                 for s in single_query_hit:
                     if s["iou"] >= 0.5:
@@ -1531,7 +1529,7 @@ class ARV_Retrieval:
             tmp_single_query_hit = []
             for j in range(I.shape[0]):
                 _j_th = I[j]
-                single_query_hit[_j_th]["score"] = -D[j]
+                single_query_hit[_j_th]["score"] = -float(D[j])
                 tmp_single_query_hit.append(single_query_hit[_j_th])  # ranking
             single_query_hit = tmp_single_query_hit
 
