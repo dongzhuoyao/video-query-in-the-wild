@@ -30,6 +30,11 @@ from misc_utils.dongzhuoyao_utils import (
 )
 
 
+class FeatureExtractionDataset(data.Dataset):
+    def __init__(self):
+        pass
+
+
 class VRActivityNet(data.Dataset):
     def __init__(self, args):
         self.args = args
@@ -702,7 +707,7 @@ class ARV_Retrieval_Clip:
                 total=len(self.gallery_list),
                 desc="eval_clips, extracting gallery feat",
             ):
-                if self.args.debug and proceeded_id > debug_iter *1:
+                if self.args.debug and proceeded_id > debug_iter * 1:
                     break
                 start_frame_idx, frame_num, frame_path, activitynet_frame_num = read_activitynet(
                     _g
@@ -854,7 +859,7 @@ class ARV_Retrieval_Clip:
             self.query_list = [[i] for i in self.query_list]
         else:
             self.query_list = generate_multi_query(self.query_list)
-        #self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
+        # self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
         self.class_map_evaluation = evaluation_metric(
             self.args, self.query_list
         )
@@ -1067,7 +1072,9 @@ class ARV_Retrieval_Moment:
                     for ann in annotations:
                         seg = ann["segment"]
                         label = ann["label"]
-                        iou = calculate_iou(seg[0], seg[1], loc_sec[0], loc_sec[1])
+                        iou = calculate_iou(
+                            seg[0], seg[1], loc_sec[0], loc_sec[1]
+                        )
                         if iou > best_iou and label in self.possible_classes:
                             best_result = dict(
                                 iou=iou, label=label, gt=seg, pred=loc_sec
@@ -1177,7 +1184,7 @@ class ARV_Retrieval_Moment:
         else:
             self.query_list = generate_multi_query(self.query_list)
 
-        #self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
+        # self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
         self.class_map_evaluation05 = evaluation_metric(
             self.args, self.query_list
         )
@@ -1198,12 +1205,20 @@ class ARV_Retrieval_Moment:
                 assert query["retrieval_type"] != RETRIEVAL_TYPE_NOISE
                 gt_label = query["label"]
                 single_query_hit = list()
-                for idx, candidate in enumerate(self.gallery_list):#construct single_query_list
+                for idx, candidate in enumerate(
+                    self.gallery_list
+                ):  # construct single_query_list
                     closest_hit = candidate["closest_hit"]
-                    scored_dict = dict(gt_label=gt_label,video_id=candidate["video_id"],
-                                       start_sec=candidate['start_sec'],
-                                       end_sec=candidate['end_sec'])
-                    if closest_hit is not None and closest_hit["label"] == gt_label:
+                    scored_dict = dict(
+                        gt_label=gt_label,
+                        video_id=candidate["video_id"],
+                        start_sec=candidate["start_sec"],
+                        end_sec=candidate["end_sec"],
+                    )
+                    if (
+                        closest_hit is not None
+                        and closest_hit["label"] == gt_label
+                    ):
                         scored_dict["iou"] = closest_hit["iou"]
                     else:
                         scored_dict["iou"] = 0
@@ -1235,23 +1250,33 @@ class ARV_Retrieval_Moment:
                 single_query_hit = tmp_single_query_hit
 
                 def do_nms(nms_threshold=0.5):
-                    #cluster
+                    # cluster
                     clusters = dict()
                     for s in single_query_hit:
-                        if s['video_id'] in clusters:
-                            clusters[s['video_id']].append(s)
+                        if s["video_id"] in clusters:
+                            clusters[s["video_id"]].append(s)
                         else:
-                            clusters[s['video_id']] = [s]
-                    #nms per cluster center
+                            clusters[s["video_id"]] = [s]
+                    # nms per cluster center
                     result_list = []
                     for video_id, _list in clusters.items():
-                        #construct numpy array
+                        # construct numpy array
                         np_list = []
                         for _element in _list:
-                            np_list.append(np.array([_element['start_sec'],_element['end_sec'],_element['score']]).reshape(1,3))
-                        np_list = np.concatenate(np_list,axis=0)
-                        keep = nms_cpu(np_list,thresh=nms_threshold)
-                        _list = [ele for idx,ele in enumerate(_list) if idx in keep]
+                            np_list.append(
+                                np.array(
+                                    [
+                                        _element["start_sec"],
+                                        _element["end_sec"],
+                                        _element["score"],
+                                    ]
+                                ).reshape(1, 3)
+                            )
+                        np_list = np.concatenate(np_list, axis=0)
+                        keep = nms_cpu(np_list, thresh=nms_threshold)
+                        _list = [
+                            ele for idx, ele in enumerate(_list) if idx in keep
+                        ]
                         result_list.extend(_list)
                     return result_list
 

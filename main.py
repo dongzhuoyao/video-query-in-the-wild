@@ -100,7 +100,10 @@ def parse():
         help="number of data loading workers (default: 4)",
     )
     parser.add_argument(
-        "--print_freq", default=50, type=int, help="print frequency (default: 10)"
+        "--print_freq",
+        default=50,
+        type=int,
+        help="print frequency (default: 10)",
     )
     parser.add_argument("--manual_seed", default=0, type=int)
     parser.add_argument("--query_num", default=1, type=int)
@@ -135,9 +138,7 @@ def parse():
     parser.add_argument("--lr_decay_rate", default=lr_decay_rate, type=str)
     parser.add_argument("--accum_grad", default=1, type=int)
     parser.add_argument("--momentum", default=0.9, type=float, help="momentum")
-    parser.add_argument(
-        "--wd", default=1e-5, type=float, help="weight decay"
-    )
+    parser.add_argument("--wd", default=1e-5, type=float, help="weight decay")
     parser.add_argument("--test_load", type=str)
     parser.add_argument("--novel_num", default=novel_num, type=int)
     parser.add_argument("--triplet_margin", default=triplet_margin, type=float)
