@@ -1,6 +1,6 @@
 import torch.nn as nn
 from collections import OrderedDict
-
+import torch
 
 class BasicBlock(nn.Module):
     expansion = 1
