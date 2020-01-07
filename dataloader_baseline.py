@@ -33,6 +33,14 @@ from misc_utils.dongzhuoyao_utils import (
 class FeatureExtractionDataset(data.Dataset):
     def __init__(self):
         pass
+        self.long_videos = list()
+
+    def __getitem__(self, index):
+        return None
+
+    def __len__(self):
+        return None
+
 
 
 class VRActivityNet(data.Dataset):
@@ -557,22 +565,22 @@ class evaluation_metric:
             ]
         )
 
-        logger.warning("*" * 30)
-        logger.warning("1-order harmonic map={}".format(o1_hmean))
-        logger.warning(
+        logger.info("*" * 30)
+        logger.info("1-order harmonic map={}".format(o1_hmean))
+        logger.info(
             "1-order class_specific_base_map={}".format(
                 o1_class_specific_base_map
             )
         )
-        logger.warning(
+        logger.info(
             "1-order class_specific_novel_map={}".format(
                 o1_class_specific_novel_map
             )
         )
-        logger.warning(
+        logger.info(
             "1-order class_specific_map={}".format(o1_class_specific_map)
         )
-        logger.warning(
+        logger.info(
             "1-order class_agnostic_map={}".format(o1_class_agnostic_map)
         )
 
@@ -589,11 +597,11 @@ class evaluation_metric:
                 o2_class_specific_novel_map
             )
         )
-        logger.warning(
+        logger.info(
             "2-order class_specific_map={}".format(o2_class_specific_map)
         )
-        logger.warning(dataset_config[self.args.meta_split]["json_path"])
-        logger.warning(
+        logger.info(dataset_config[self.args.meta_split]["json_path"])
+        logger.info(
             dataset_config[self.args.meta_split]["moment_eval_json_path"]
         )
 
