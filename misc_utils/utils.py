@@ -54,14 +54,6 @@ class MedianMeter(AverageMeter):
             self.multipleupdate(val, n)
 
 
-def submission_file(ids, outputs, filename):
-    """ write list of ids and outputs to filename"""
-    with open(filename, "w") as f:
-        for vid, output in zip(ids, outputs):
-            scores = ["{:g}".format(x) for x in output]
-            f.write("{} {}\n".format(vid, " ".join(scores)))
-
-
 class Timer(AverageMeter):
     def __init__(self):
         super(Timer, self).__init__()

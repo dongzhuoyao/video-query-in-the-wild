@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.distributed as dist
 import collections
+import numpy as np
+
 
 
 class IdentityModule(nn.Module):
@@ -147,10 +149,6 @@ def set_distributed_backend(model, args):
         else:
             model = MyDataParallel(model).cuda()
     return model
-
-
-import numpy as np
-import torch
 
 
 def nms_cpu(dets, thresh):
