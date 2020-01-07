@@ -31,7 +31,7 @@ from misc_utils.dongzhuoyao_utils import (
 
 
 class LongVideoDataset(data.Dataset):
-    def __init__(self,gallery_list, test_frame_num, input_size):
+    def __init__(self, gallery_list, test_frame_num, input_size):
         self.long_videos = gallery_list
         self.test_frame_num = test_frame_num
         self.video_list = []
@@ -42,37 +42,37 @@ class LongVideoDataset(data.Dataset):
                 _g
             )
             chunk_list = list(
-                chunks(
-                    list(range(activitynet_frame_num)), self.test_frame_num
-                )
+                chunks(list(range(activitynet_frame_num)), self.test_frame_num)
             )
             for idx, chunk in enumerate(chunk_list):
-                video_dict = dict(frame_path=frame_path, start_frame_idx=chunk[0], gt_frame_num=len(chunk), train_frame_num = self.test_frame_num, activitynet_frame_num=activitynet_frame_num)
+                video_dict = dict(
+                    frame_path=frame_path,
+                    start_frame_idx=chunk[0],
+                    gt_frame_num=len(chunk),
+                    train_frame_num=self.test_frame_num,
+                    activitynet_frame_num=activitynet_frame_num,
+                )
                 self.video_list.append(video_dict)
                 self.meta_list.append(dict(long_video_id=long_id, seg_id=idx))
 
-
-
     def __getitem__(self, index):
-                video_dict = self.video_list[index]
-                images = read_video(
-                    frame_path=video_dict['frame_path'],
-                    start_frame_idx=video_dict['start_frame_idx'],
-                    gt_frame_num=video_dict['gt_frame_num'],
-                    train_frame_num=video_dict['train_frame_num'],
-                    video_transform=transforms.Compose(
-                        [videotransforms.CenterCrop(self.input_size)]
-                    ),
-                    activitynet_frame_num=video_dict['activitynet_frame_num'],
-                )
-                images = torch.from_numpy(images).float()
-                assert images.shape[0] == self.test_frame_num
-                return images, self.meta_list[index]
+        video_dict = self.video_list[index]
+        images = read_video(
+            frame_path=video_dict["frame_path"],
+            start_frame_idx=video_dict["start_frame_idx"],
+            gt_frame_num=video_dict["gt_frame_num"],
+            train_frame_num=video_dict["train_frame_num"],
+            video_transform=transforms.Compose(
+                [videotransforms.CenterCrop(self.input_size)]
+            ),
+            activitynet_frame_num=video_dict["activitynet_frame_num"],
+        )
+        images = torch.from_numpy(images).float()
+        assert images.shape[0] == self.test_frame_num
+        return images, self.meta_list[index]
 
     def __len__(self):
         return len(self.video_list)
-
-
 
 
 class VRActivityNet(data.Dataset):
@@ -742,9 +742,12 @@ class ARV_Retrieval_Clip:
                 if q["label"] in self.possible_classes:
                     self.query_list.append(q)
 
-
             _loader = torch.utils.data.DataLoader(
-                LongVideoDataset(gallery_list=self.gallery_list,input_size=self.input_size, test_frame_num=self.test_frame_num),
+                LongVideoDataset(
+                    gallery_list=self.gallery_list,
+                    input_size=self.input_size,
+                    test_frame_num=self.test_frame_num,
+                ),
                 batch_size=self.test_batch_size,
                 shuffle=False,
                 drop_last=False,
@@ -753,9 +756,9 @@ class ARV_Retrieval_Clip:
             )
             feat_dict = dict()
             for proceeded_id, data in tqdm(
-                    enumerate(_loader),
-                    total=len(_loader),
-                    desc="eval_clips, extracting gallery feat",
+                enumerate(_loader),
+                total=len(_loader),
+                desc="eval_clips, extracting gallery feat",
             ):
                 if self.args.debug and proceeded_id > debug_iter * 1:
                     break
@@ -766,9 +769,11 @@ class ARV_Retrieval_Clip:
                     _feats = np.random.rand(
                         self.test_batch_size, self.feat_dim, self.test_frame_num
                     ).astype(np.float32)
-                long_video_ids = meta['long_video_id'].numpy().tolist()
-                seg_ids = meta['seg_id'].numpy().tolist()
-                for _, (long_video_id, seg_id) in enumerate(zip(long_video_ids, seg_ids)):
+                long_video_ids = meta["long_video_id"].numpy().tolist()
+                seg_ids = meta["seg_id"].numpy().tolist()
+                for _, (long_video_id, seg_id) in enumerate(
+                    zip(long_video_ids, seg_ids)
+                ):
                     if long_video_id not in feat_dict:
                         feat_dict[long_video_id] = dict()
                     feat_dict[long_video_id][seg_id] = _feats[_]
@@ -1043,8 +1048,11 @@ class ARV_Retrieval_Moment:
 
             ### extract feature for gallery video #####
             _loader = torch.utils.data.DataLoader(
-                LongVideoDataset(gallery_list=self.gallery_list, input_size=self.input_size,
-                                 test_frame_num=self.test_frame_num),
+                LongVideoDataset(
+                    gallery_list=self.gallery_list,
+                    input_size=self.input_size,
+                    test_frame_num=self.test_frame_num,
+                ),
                 batch_size=self.test_batch_size,
                 shuffle=False,
                 drop_last=False,
@@ -1053,9 +1061,9 @@ class ARV_Retrieval_Moment:
             )
             feat_dict = dict()
             for proceeded_id, data in tqdm(
-                    enumerate(_loader),
-                    total=len(_loader),
-                    desc="eval_clips, extracting gallery feat",
+                enumerate(_loader),
+                total=len(_loader),
+                desc="eval_clips, extracting gallery feat",
             ):
                 if self.args.debug and proceeded_id > debug_iter * 1:
                     break
@@ -1066,9 +1074,11 @@ class ARV_Retrieval_Moment:
                     _feats = np.random.rand(
                         self.test_batch_size, self.feat_dim, self.test_frame_num
                     ).astype(np.float32)
-                long_video_ids = meta['long_video_id'].numpy().tolist()
-                seg_ids = meta['seg_id'].numpy().tolist()
-                for _, (long_video_id, seg_id) in enumerate(zip(long_video_ids, seg_ids)):
+                long_video_ids = meta["long_video_id"].numpy().tolist()
+                seg_ids = meta["seg_id"].numpy().tolist()
+                for _, (long_video_id, seg_id) in enumerate(
+                    zip(long_video_ids, seg_ids)
+                ):
                     if long_video_id not in feat_dict:
                         feat_dict[long_video_id] = dict()
                     feat_dict[long_video_id][seg_id] = _feats[_]
