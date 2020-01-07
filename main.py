@@ -307,7 +307,7 @@ def train_ranking(loader, model, optimizer, epoch, args):
 
         if i % args.print_freq == 0 and i > 0:
             logger.info(
-                "[{0}][{1}/{2}({3})]\t"
+                "[{0}][{1}/{2}]\t"
                 "Dataload_Time={data_time.avg:.3f}\t"
                 "Loss={loss.avg:.4f}\t"
                 "CELoss={ce_loss.avg:.4f}\t"
@@ -316,7 +316,6 @@ def train_ranking(loader, model, optimizer, epoch, args):
                 "bestAP={ap:.3f}".format(
                     epoch,
                     i,
-                    len(loader),
                     len(loader),
                     data_time=data_time,
                     loss=loss_meter,
@@ -328,6 +327,7 @@ def train_ranking(loader, model, optimizer, epoch, args):
             )
             loss_meter.reset()
             ce_loss_meter.reset()
+            reg_loss_meter.reset()
 
 
 def train_vasa(loader, model, optimizer, epoch, args):
@@ -377,7 +377,7 @@ def train_vasa(loader, model, optimizer, epoch, args):
 
         if i % args.print_freq == 0 and i > 0:
             logger.info(
-                "[{0}][{1}/{2}({3})]\t"
+                "[{0}][{1}/{2}]\t"
                 "Dataload_Time={data_time.avg:.3f}\t"
                 "Loss={loss.avg:.4f}\t"
                 "CELoss={ce_loss.avg:.4f}\t"
@@ -387,7 +387,6 @@ def train_vasa(loader, model, optimizer, epoch, args):
                 "bestAP={ap:.3f}".format(
                     epoch,
                     i,
-                    len(loader),
                     len(loader),
                     data_time=data_time,
                     loss=loss_meter,
@@ -400,6 +399,8 @@ def train_vasa(loader, model, optimizer, epoch, args):
             )
             loss_meter.reset()
             ce_loss_meter.reset()
+            reg_loss_meter.reset()
+            word_loss_meter.reset()
 
 
 def train_va(loader, model, optimizer, epoch, args):
@@ -448,7 +449,7 @@ def train_va(loader, model, optimizer, epoch, args):
 
         if i % args.print_freq == 0 and i > 0:
             logger.info(
-                "[{0}][{1}/{2}({3})]\t"
+                "[{0}][{1}/{2})]\t"
                 "Dataload_Time={data_time.avg:.3f}\t"
                 "Loss={loss.avg:.4f}\t"
                 "CELoss={ce_loss.avg:.4f}\t"
@@ -457,7 +458,6 @@ def train_va(loader, model, optimizer, epoch, args):
                 "bestAP={ap:.3f}".format(
                     epoch,
                     i,
-                    len(loader),
                     len(loader),
                     data_time=data_time,
                     loss=loss_meter,
@@ -469,6 +469,7 @@ def train_va(loader, model, optimizer, epoch, args):
             )
             loss_meter.reset()
             ce_loss_meter.reset()
+            reg_loss_meter.reset()
 
 
 def train(loader, model, optimizer, epoch, args):
@@ -510,7 +511,7 @@ def train(loader, model, optimizer, epoch, args):
 
         if i % args.print_freq == 0 and i > 0:
             logger.info(
-                "[{0}][{1}/{2}({3})]\t"
+                "[{0}][{1}/{2}]\t"
                 "Dataload_Time={data_time.avg:.3f}\t"
                 "Loss={loss.avg:.4f}\t"
                 "CELoss={ce_loss.avg:.4f}\t"
@@ -518,7 +519,6 @@ def train(loader, model, optimizer, epoch, args):
                 "bestAP={ap:.3f}".format(
                     epoch,
                     i,
-                    len(loader),
                     len(loader),
                     data_time=data_time,
                     loss=loss_meter,
@@ -529,6 +529,7 @@ def train(loader, model, optimizer, epoch, args):
             )
             loss_meter.reset()
             ce_loss_meter.reset()
+
 
 
 def main():
