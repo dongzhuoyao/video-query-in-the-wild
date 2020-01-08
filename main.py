@@ -531,7 +531,6 @@ def train(loader, model, optimizer, epoch, args):
             ce_loss_meter.reset()
 
 
-
 def main():
     args = parse()
     set_gpu(args.gpu)

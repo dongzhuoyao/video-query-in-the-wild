@@ -112,9 +112,7 @@ class VRActivityNet(data.Dataset):
                 _removed_set.add(video_id)
             self.data_dict[self.split][cls_name] = _new_list
         logger.warning(
-            "sanity check, removing {} items".format(
-                len(_removed_set)
-            )
+            "sanity check, removing {} items".format(len(_removed_set))
         )
 
     def load_data(self):
@@ -135,7 +133,6 @@ class VRActivityNet(data.Dataset):
             else:  # only keep minimal novel class
                 new_dict[cls_name] = item_list[: self.novel_num]
             self.cur_label_list.append(cls_name)
-
 
         self.data_dict[self.split] = new_dict  # remove novel and noisy label
         self.cls2int = {label: i for i, label in enumerate(self.cur_label_list)}
@@ -551,9 +548,7 @@ class evaluation_metric:
             )
 
             logger.info("2-order R@{}={}".format(str(_thres), avg_recall))
-            logger.info(
-                "2-order base R@{}={}".format(str(_thres), base_recall)
-            )
+            logger.info("2-order base R@{}={}".format(str(_thres), base_recall))
             logger.info(
                 "2-order novel R@{}={}".format(str(_thres), novel_recall)
             )

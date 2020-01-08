@@ -6,7 +6,6 @@ import collections
 import numpy as np
 
 
-
 class IdentityModule(nn.Module):
     def forward(self, inputs):
         return inputs
