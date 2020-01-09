@@ -613,6 +613,7 @@ def main():
     )
     model.load_state_dict(saved_dict["state_dict"], strict=True)
     args.eval_split = "testing"
+    args.eval_all = True
     logger.info(vars(args))
     score_dict = do_eval(args=args, model=model)
     logger.info(

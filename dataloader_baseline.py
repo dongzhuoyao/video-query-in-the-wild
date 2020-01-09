@@ -507,17 +507,17 @@ class evaluation_metric:
             )
             logger.info(
                 "1-order R@{}={}".format(
-                    str(_thres), self.full_retrieval_top[str(_thres)]
+                    str(_thres), self.full_retrieval_top[str(_thres)]*100
                 )
             )
             logger.info(
                 "1-order base R@{}={}".format(
-                    str(_thres), self.base_retrieval_top[str(_thres)]
+                    str(_thres), self.base_retrieval_top[str(_thres)]*100
                 )
             )
             logger.info(
                 "1-order novel R@{}={}".format(
-                    str(_thres), self.novel_retrieval_top[str(_thres)]
+                    str(_thres), self.novel_retrieval_top[str(_thres)]*100
                 )
             )
 
@@ -547,10 +547,10 @@ class evaluation_metric:
                 ]
             )
 
-            logger.info("2-order R@{}={}".format(str(_thres), avg_recall))
-            logger.info("2-order base R@{}={}".format(str(_thres), base_recall))
+            logger.info("2-order R@{}={}".format(str(_thres), avg_recall*100))
+            logger.info("2-order base R@{}={}".format(str(_thres), base_recall*100))
             logger.info(
-                "2-order novel R@{}={}".format(str(_thres), novel_recall)
+                "2-order novel R@{}={}".format(str(_thres), novel_recall*100)
             )
             logger.info("-" * 30)
 
@@ -595,36 +595,36 @@ class evaluation_metric:
         logger.info("1-order harmonic map={}".format(o1_hmean))
         logger.info(
             "1-order class_specific_base_map={}".format(
-                o1_class_specific_base_map
+                o1_class_specific_base_map*100
             )
         )
         logger.info(
             "1-order class_specific_novel_map={}".format(
-                o1_class_specific_novel_map
+                o1_class_specific_novel_map*100
             )
         )
         logger.info(
-            "1-order class_specific_map={}".format(o1_class_specific_map)
+            "1-order class_specific_map={}".format(o1_class_specific_map*100)
         )
         logger.info(
-            "1-order class_agnostic_map={}".format(o1_class_agnostic_map)
+            "1-order class_agnostic_map={}".format(o1_class_agnostic_map*100)
         )
 
         logger.warning(
-            "(report metric)2-order harmonic map={}".format(o2_hmean)
+            "(report metric)2-order harmonic map={}".format(o2_hmean*100)
         )
         logger.warning(
             "(report metric)2-order class_specific_base_map={}".format(
-                o2_class_specific_base_map
+                o2_class_specific_base_map*100
             )
         )
         logger.warning(
             "(report metric)2-order class_specific_novel_map={}".format(
-                o2_class_specific_novel_map
+                o2_class_specific_novel_map*100
             )
         )
         logger.info(
-            "2-order class_specific_map={}".format(o2_class_specific_map)
+            "2-order class_specific_map={}".format(o2_class_specific_map*100)
         )
         logger.info(dataset_config[self.args.meta_split]["json_path"])
         logger.info(
