@@ -93,7 +93,7 @@ class VRActivityNet(data.Dataset):
         for cls_name in self.data_dict[self.split]:
             if cls_name != noisy_label:
                 l += len(self.data_dict[self.split][cls_name])
-        self.length = l//3#because we return a triplet every iteration
+        self.length = l // 3  # because we return a triplet every iteration
         logger.info("dataset video number={}".format(l))
 
     def sanity_check(self):
@@ -508,17 +508,17 @@ class evaluation_metric:
             )
             logger.info(
                 "1-order R@{}={}".format(
-                    str(_thres), self.full_retrieval_top[str(_thres)]*100
+                    str(_thres), self.full_retrieval_top[str(_thres)] * 100
                 )
             )
             logger.info(
                 "1-order base R@{}={}".format(
-                    str(_thres), self.base_retrieval_top[str(_thres)]*100
+                    str(_thres), self.base_retrieval_top[str(_thres)] * 100
                 )
             )
             logger.info(
                 "1-order novel R@{}={}".format(
-                    str(_thres), self.novel_retrieval_top[str(_thres)]*100
+                    str(_thres), self.novel_retrieval_top[str(_thres)] * 100
                 )
             )
 
@@ -548,10 +548,12 @@ class evaluation_metric:
                 ]
             )
 
-            logger.info("2-order R@{}={}".format(str(_thres), avg_recall*100))
-            logger.info("2-order base R@{}={}".format(str(_thres), base_recall*100))
+            logger.info("2-order R@{}={}".format(str(_thres), avg_recall * 100))
             logger.info(
-                "2-order novel R@{}={}".format(str(_thres), novel_recall*100)
+                "2-order base R@{}={}".format(str(_thres), base_recall * 100)
+            )
+            logger.info(
+                "2-order novel R@{}={}".format(str(_thres), novel_recall * 100)
             )
             logger.info("-" * 30)
 
@@ -596,36 +598,36 @@ class evaluation_metric:
         logger.info("1-order harmonic map={}".format(o1_hmean))
         logger.info(
             "1-order class_specific_base_map={}".format(
-                o1_class_specific_base_map*100
+                o1_class_specific_base_map * 100
             )
         )
         logger.info(
             "1-order class_specific_novel_map={}".format(
-                o1_class_specific_novel_map*100
+                o1_class_specific_novel_map * 100
             )
         )
         logger.info(
-            "1-order class_specific_map={}".format(o1_class_specific_map*100)
+            "1-order class_specific_map={}".format(o1_class_specific_map * 100)
         )
         logger.info(
-            "1-order class_agnostic_map={}".format(o1_class_agnostic_map*100)
+            "1-order class_agnostic_map={}".format(o1_class_agnostic_map * 100)
         )
 
         logger.warning(
-            "(report metric)2-order harmonic map={}".format(o2_hmean*100)
+            "(report metric)2-order harmonic map={}".format(o2_hmean * 100)
         )
         logger.warning(
             "(report metric)2-order class_specific_base_map={}".format(
-                o2_class_specific_base_map*100
+                o2_class_specific_base_map * 100
             )
         )
         logger.warning(
             "(report metric)2-order class_specific_novel_map={}".format(
-                o2_class_specific_novel_map*100
+                o2_class_specific_novel_map * 100
             )
         )
         logger.info(
-            "2-order class_specific_map={}".format(o2_class_specific_map*100)
+            "2-order class_specific_map={}".format(o2_class_specific_map * 100)
         )
         logger.info(dataset_config[self.args.meta_split]["json_path"])
         logger.info(
