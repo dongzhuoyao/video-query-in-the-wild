@@ -36,9 +36,9 @@ from dataloader_baseline import (
 )
 
 init_lr = 1e-4
-epochs = 15
+epochs = 16
 lr_decay_rate = 9
-eval_per_epoch = 1
+eval_per_epoch = 2
 batch_size = 10
 test_batch_size = 10 * 3
 triplet_margin = 1
@@ -584,7 +584,7 @@ def main():
             train_ranking(train_loader, model, optimizer, epoch, args)
         else:
             raise
-        if (epoch % eval_per_epoch == 0 and epoch > 0) or epoch == args.epochs - 1:
+        if epoch % eval_per_epoch == 0 or epoch == args.epochs - 1:
             score_dict = do_eval(args=args, model=model)
 
             score = score_dict["ap"]
