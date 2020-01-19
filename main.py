@@ -36,9 +36,9 @@ from dataloader_baseline import (
 )
 
 init_lr = 1e-4
-eval_per = 15
-lr_decay_rate = "90"
-epochs = 150
+epochs = 15
+lr_decay_rate = 9
+eval_per_epoch = 1
 batch_size = 10
 test_batch_size = 10 * 3
 triplet_margin = 1
@@ -135,7 +135,7 @@ def parse():
     parser.add_argument(
         "--lr", default=init_lr, type=float, help="initial learning rate"
     )
-    parser.add_argument("--lr_decay_rate", default=lr_decay_rate, type=str)
+    parser.add_argument("--lr_decay_rate", default=lr_decay_rate, type=int)
     parser.add_argument("--accum_grad", default=1, type=int)
     parser.add_argument("--momentum", default=0.9, type=float, help="momentum")
     parser.add_argument("--wd", default=1e-5, type=float, help="weight decay")
@@ -174,8 +174,7 @@ def parse():
 
 
 def adjust_learning_rate(decay_rate, optimizer, epoch):
-    decay_rates = int(decay_rate)
-    if epoch == decay_rates:
+    if epoch == decay_rate:
         for g_id, param_group in enumerate(optimizer.param_groups):
             origin_lr = param_group["lr"]
             param_group["lr"] = origin_lr * 0.1
@@ -585,7 +584,7 @@ def main():
             train_ranking(train_loader, model, optimizer, epoch, args)
         else:
             raise
-        if (epoch % eval_per == 0 and epoch > 0) or epoch == args.epochs - 1:
+        if (epoch % eval_per_epoch == 0 and epoch > 0) or epoch == args.epochs - 1:
             score_dict = do_eval(args=args, model=model)
 
             score = score_dict["ap"]

@@ -93,7 +93,8 @@ class VRActivityNet(data.Dataset):
         for cls_name in self.data_dict[self.split]:
             if cls_name != noisy_label:
                 l += len(self.data_dict[self.split][cls_name])
-        self.length = l
+        self.length = l//3
+        logger.info("dataset video number={}".format(self.length))
 
     def sanity_check(self):
         for cls_name in self.data_dict[self.split]:
@@ -218,7 +219,7 @@ class VRActivityNet(data.Dataset):
 
     def __len__(self):
 
-        return self.length // 3
+        return self.length
 
 
 def get_my_dataset(args):
