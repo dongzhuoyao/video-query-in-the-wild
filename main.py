@@ -5,7 +5,7 @@ from bdb import BdbQuit
 import traceback
 import sys
 from misc_utils import pytorchgo_logger as logger
-from misc_utils.utils_torch import model_summary, optimizer_summary, set_gpu
+from misc_utils.pytorchgo_util import model_summary, optimizer_summary
 
 import cv2
 import torch.nn as nn
@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 cv2.setNumThreads(0)
 cv2.ocl.setUseOpenCL(False)
+import resource
 import resource
 
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -58,7 +59,7 @@ def parse():
     parser.add_argument(
         "--method",
         default="baseline",
-        choices=["baseline", "va", "vasa"],
+        choices=["baseline","baseline2d", "va", "vasa"],
         type=str,
     )
     parser.add_argument(
@@ -79,7 +80,7 @@ def parse():
         help="[0-1], 0 = leave defaults",
     )
     parser.add_argument(
-        "--pretrained", action="store_true", help="use pre-trained model"
+        "--pretrained", default=pretrained, help="use pre-trained model"
     )
     parser.add_argument("--pretrained_weights", default="")
     parser.add_argument("--nclass", default=nclass, type=int)
@@ -159,10 +160,12 @@ def parse():
 
     args = parser.parse_args()
 
+    from misc_utils import pytorchgo_args
+    pytorchgo_args.set_args(args)
+
     if args.debug:
         args.epochs = 2
 
-    args.pretrained = pretrained
     args.logger_dir = "train_log/{}_{}_novel{}_mv{}".format(
         os.path.basename(__file__).replace(".py", ""),
         args.method,
@@ -194,21 +197,18 @@ def adjust_learning_rate(decay_rate, optimizer, epoch):
 def get_model(args):
     if args.method == "baseline":
         from models.resnet18_3d_f2f import ResNet3D, BasicBlock
+    elif args.method == "baseline2d":
+        from models.resnet18_2d import resnet18
+        model = resnet18(pretrained=args.pretrained, progress=True, num_classes=args.nclass)
     elif args.method == "va":
         from models.resnet18_va import ResNet3D, BasicBlock
     elif args.method == "vasa":
         from models.resnet18_vasa import ResNet3D, BasicBlock
     else:
         raise
-    model = ResNet3D(
-        args, BasicBlock, [2, 2, 2, 2], num_classes=args.nclass
-    )  # 50
-    if args.pretrained:
-        print("loading pretrained weight.!")
-        from torchvision.models.resnet import resnet18
 
-        model2d = resnet18(pretrained=True)
-        model.load_2d(model2d)
+
+
     from misc_utils.model_utils import set_distributed_backend
 
     model = set_distributed_backend(
@@ -532,7 +532,7 @@ def train(loader, model, optimizer, epoch, args):
 
 def main():
     args = parse()
-    set_gpu(args.gpu)
+    #set_gpu(args.gpu)
     args.best_score = 0
     args.best_result_dict = {}
 
@@ -575,6 +575,8 @@ def main():
 
     for epoch in range(args.epochs):
         if args.method == "baseline":
+            train(train_loader, model, optimizer, epoch, args)
+        if args.method == "baseline2d":
             train(train_loader, model, optimizer, epoch, args)
         elif args.method == "va":
             train_va(train_loader, model, optimizer, epoch, args)
