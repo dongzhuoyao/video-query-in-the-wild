@@ -26,7 +26,7 @@ import argparse
 import os
 
 debug_short_train_num = 1
-novel_num = 5
+novel_num = 1
 input_size = 112
 nclass = 200
 
@@ -36,21 +36,21 @@ from dataloader_baseline import (
     ARV_Retrieval_Moment,
 )
 
-init_lr = 1e-4
-epochs = 16
-lr_decay_rate = 9
-eval_per_epoch = 2
+init_lr = 1e-3
+epochs = 40
+lr_decay_rate = 24
+eval_per_epoch = 4
 batch_size = 10
 test_batch_size = 10 * 3
 triplet_margin = 1
-pretrained = True
+pretrained = False
 eval_split = "testing"
 train_frame = 32
 dropout = 0.5
 temporal_stride = 1
 clip_sec = 6
 metric_feat_dim = 512
-moving_average = 0.9
+moving_average = 0.999
 
 
 def parse():
@@ -58,8 +58,8 @@ def parse():
     parser = argparse.ArgumentParser(description="Video Retrieval In the Wild")
     parser.add_argument(
         "--method",
-        default="baseline",
-        choices=["baseline","baseline2d", "va", "vasa"],
+        default="baseline2d",
+        choices=["baseline","baseline2d", "va","moco_va", "moco_vasa"],
         type=str,
     )
     parser.add_argument(
@@ -82,11 +82,7 @@ def parse():
     parser.add_argument(
         "--pretrained", default=pretrained, help="use pre-trained model"
     )
-    parser.add_argument("--pretrained_weights", default="")
     parser.add_argument("--nclass", default=nclass, type=int)
-    parser.add_argument(
-        "--features", default="fc", help="conv1;layer1;layer2;layer3;layer4;fc"
-    )
     parser.add_argument(
         "--semantic_json",
         default="word_embed/wordembed_elmo_d1024.json",
@@ -157,7 +153,6 @@ def parse():
     parser.add_argument("--eval_all", action="store_true")
     parser.add_argument("--log_action", default="n", type=str)
     parser.add_argument("--moving_average", default=moving_average, type=int)
-
     args = parser.parse_args()
 
     from misc_utils import pytorchgo_args
@@ -166,10 +161,11 @@ def parse():
     if args.debug:
         args.epochs = 2
 
-    args.logger_dir = "train_log/{}_{}_novel{}_mv{}".format(
+    args.logger_dir = "train_log/resnet2222_{}_{}_novel{}_pretrain{}_mv{}".format(
         os.path.basename(__file__).replace(".py", ""),
         args.method,
         args.novel_num,
+        args.pretrained,
         args.moving_average,
     )
     logger.set_logger_dir(args.logger_dir, args.log_action)
@@ -200,10 +196,12 @@ def get_model(args):
     elif args.method == "baseline2d":
         from models.resnet18_2d import resnet18
         model = resnet18(pretrained=args.pretrained, progress=True, num_classes=args.nclass)
-    elif args.method == "va":
-        from models.resnet18_va import ResNet3D, BasicBlock
-    elif args.method == "vasa":
-        from models.resnet18_vasa import ResNet3D, BasicBlock
+    elif args.method == "moco_va":
+        from models.resnet18_2d_moco_va import Net_Moco
+        model = Net_Moco(pretrained=args.pretrained, progress=True, num_classes=args.nclass)
+    elif args.method == "moco_vasa":
+        from models.resnet18_2d_moco_va_sa import Net_Moco
+        model = Net_Moco(pretrained=args.pretrained, progress=True, num_classes=args.nclass)
     else:
         raise
 
@@ -222,13 +220,19 @@ def do_eval(args, model):
 
     def feat_func(input):
         if args.method == "baseline":
+            metric_feat, _ = model(input)  # [B,C,T]
+        elif args.method == "baseline2d":
+            metric_feat, _ = model(input)  # [B,C,T]
+        elif args.method == "moco_va":
+            metric_feat = model(input)  # [B,C,T]
+        elif args.method == "moco_vasa":
             metric_feat = model(input)  # [B,C,T]
         elif args.method == "va":
-            metric_feat = model(input, None, None)  # [B,C,T]
+            metric_feat, _ = model(input, None, None)  # [B,C,T]
         elif args.method == "vasa":
-            metric_feat = model(input, None, None, None)  # [B,C,T]
-        else:
-            raise
+            metric_feat, _ = model(input, None, None, None)  # [B,C,T]
+        else:raise
+
         metric_feat = F.normalize(metric_feat, p=2, dim=1)  # normalize on C
         return metric_feat.data.cpu().numpy()
 
@@ -357,11 +361,9 @@ def train_vasa(loader, model, optimizer, epoch, args):
             input.shape[4],
             input.shape[5],
         )
-        metric_feat, cls_logit, reg_logit, word_logit = model(
-            input, target, temperature=0.1
-        )
+        metric_feat, cls_logit, consistency_loss, word_logit = model(input)
         ce_loss = ce_loss_criterion(cls_logit.cuda(), target.long().cuda())
-        reg_loss = ce_loss_criterion(reg_logit.cuda(), target.long().cuda())
+        reg_loss = consistency_loss
         word_loss = ce_loss_criterion(word_logit.cuda(), target.long().cuda())
         loss = ce_loss + reg_loss + word_loss
 
@@ -471,6 +473,72 @@ def train_va(loader, model, optimizer, epoch, args):
             reg_loss_meter.reset()
 
 
+
+def train_moco_va(loader, model, optimizer, epoch, args):
+    timer = Timer()
+    data_time = AverageMeter()
+    loss_meter = AverageMeter()
+    ce_loss_meter = AverageMeter()
+    reg_loss_meter = AverageMeter()
+    cur_lr = adjust_learning_rate(args.lr_decay_rate, optimizer, epoch)
+    model.train()
+    optimizer.zero_grad()
+    ce_loss_criterion = nn.CrossEntropyLoss()
+    for i, (input, meta) in tqdm(enumerate(loader), desc="Train Epoch"):
+        if args.debug and i >= debug_short_train_num:
+            break
+        data_time.update(timer.thetime() - timer.end)
+
+        _batch_size = len(meta)
+        target = []
+        for _ in range(_batch_size):
+            target.extend(meta[_]["labels"])
+        target = torch.from_numpy(np.array(target))
+        input = input.view(
+            _batch_size * 3,
+            input.shape[2],
+            input.shape[3],
+            input.shape[4],
+            input.shape[5],
+        )
+        metric_feat, cls_logits, consistency_mse_loss = model(input)
+        ce_loss = ce_loss_criterion(cls_logits.cuda(), target.long().cuda())
+        consistency_mse_loss = consistency_mse_loss.mean()#TODO, buggy
+        loss = ce_loss + consistency_mse_loss
+        loss.backward()
+        loss_meter.update(loss.item())
+        ce_loss_meter.update(ce_loss.item())
+        reg_loss_meter.update(consistency_mse_loss.item())
+        if i % args.accum_grad == args.accum_grad - 1:
+            optimizer.step()
+            optimizer.zero_grad()
+
+        if i % args.print_freq == 0 and i > 0:
+            logger.info(
+                "[{0}][{1}/{2})]\t"
+                "Dataload_Time={data_time.avg:.3f}\t"
+                "Loss={loss.avg:.4f}\t"
+                "CELoss={ce_loss.avg:.4f}\t"
+                "Consistency Loss={reg_loss.avg:.4f}\t"
+                "LR={cur_lr:.7f}\t"
+                "bestAP={ap:.3f}".format(
+                    epoch,
+                    i,
+                    len(loader),
+                    data_time=data_time,
+                    loss=loss_meter,
+                    ce_loss=ce_loss_meter,
+                    reg_loss=reg_loss_meter,
+                    ap=args.best_score,
+                    cur_lr=cur_lr,
+                )
+            )
+            loss_meter.reset()
+            ce_loss_meter.reset()
+            reg_loss_meter.reset()
+
+
+
 def train(loader, model, optimizer, epoch, args):
     timer = Timer()
     data_time = AverageMeter()
@@ -576,17 +644,19 @@ def main():
     for epoch in range(args.epochs):
         if args.method == "baseline":
             train(train_loader, model, optimizer, epoch, args)
-        if args.method == "baseline2d":
+        elif args.method == "baseline2d":
             train(train_loader, model, optimizer, epoch, args)
-        elif args.method == "va":
-            train_va(train_loader, model, optimizer, epoch, args)
+        elif args.method == "moco_va":
+            train_moco_va(train_loader, model, optimizer, epoch, args)
+        elif args.method == "moco_vasa":
+            train_vasa(train_loader, model, optimizer, epoch, args)
         elif args.method == "vasa":
             train_vasa(train_loader, model, optimizer, epoch, args)
         elif args.method == "ranking":
             train_ranking(train_loader, model, optimizer, epoch, args)
         else:
             raise
-        if epoch % eval_per_epoch == 0 or epoch == args.epochs - 1:
+        if (epoch % eval_per_epoch == 0 and epoch>0) or epoch == args.epochs - 1:
             score_dict = do_eval(args=args, model=model)
 
             score = score_dict["ap"]

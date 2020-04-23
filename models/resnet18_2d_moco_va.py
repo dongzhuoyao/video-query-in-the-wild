@@ -6,7 +6,7 @@ except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
 from misc_utils import pytorchgo_logger as logger
-
+from misc_utils import pytorchgo_args
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -277,6 +277,44 @@ def resnet18(pretrained=False, progress=True, **kwargs):
     """
     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
                    **kwargs)
+
+
+
+
+
+
+class Net_Moco(nn.Module):
+
+    def __init__(self, pretrained, progress, num_classes):
+        super(Net_Moco, self).__init__()
+        self.query_encoder = resnet18(pretrained=pretrained, progress=progress, num_classes=num_classes)
+        self.key_encoder = resnet18(pretrained=pretrained, progress=progress, num_classes=num_classes)
+        self.m = pytorchgo_args.get_args().moving_average
+
+        self.mse_loss = torch.nn.MSELoss(reduce='mean')
+
+    @torch.no_grad()
+    def _momentum_update_key_encoder(self):
+        """
+        Momentum update of the key encoder
+        """
+        for param_q, param_k in zip(self.query_encoder.parameters(), self.key_encoder.parameters()):
+            param_k.data = param_k.data * self.m + param_q.data * (1. - self.m)
+
+    def forward(self, x):
+        frame_rank_embed_query, video_cls_query = self.query_encoder(x)
+        if self.training:
+            with torch.no_grad():  # no gradient to keys
+                frame_rank_embed_key, video_cls_key = self.key_encoder(x)
+                self._momentum_update_key_encoder()  # update the key encoder
+
+            #enhanced_frame_rank_embed_query = self.fc(self.cls_nl(x_support=frame_rank_embed_query, query=frame_rank_embed_key))
+            #mse = self.mse_loss(frame_rank_embed_key.mean(-1), frame_rank_embed_query.mean(-1))
+            mse = self.mse_loss(video_cls_query, video_cls_key)
+            return frame_rank_embed_query,video_cls_query, mse
+        else:
+            return frame_rank_embed_query
+
 
 
 def resnet34(pretrained=False, progress=True, **kwargs):

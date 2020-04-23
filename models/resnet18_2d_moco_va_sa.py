@@ -6,7 +6,8 @@ except ImportError:
     from torch.utils.model_zoo import load_url as load_state_dict_from_url
 
 from misc_utils import pytorchgo_logger as logger
-
+from misc_utils import pytorchgo_args
+import torch.nn.functional as F
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'resnet152', 'resnext50_32x4d', 'resnext101_32x8d',
@@ -24,6 +25,19 @@ model_urls = {
     'wide_resnet50_2': 'https://download.pytorch.org/models/wide_resnet50_2-95faca4d.pth',
     'wide_resnet101_2': 'https://download.pytorch.org/models/wide_resnet101_2-32ee1156.pth',
 }
+
+
+class SemanticAdaptor_Conv1d(nn.Module):
+    def __init__(self, semantic_dim=1024):
+        super(SemanticAdaptor_Conv1d, self).__init__()
+        self.fc = nn.Conv1d(in_channels=512, out_channels=896,kernel_size=3, padding=1)
+        self.fc2 = nn.Conv1d(in_channels=896, out_channels=semantic_dim,kernel_size=3, padding=1)
+        self.relu = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.relu(self.fc(x))
+        x = self.fc2(x)
+        return x
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -277,6 +291,65 @@ def resnet18(pretrained=False, progress=True, **kwargs):
     """
     return _resnet('resnet18', BasicBlock, [2, 2, 2, 2], pretrained, progress,
                    **kwargs)
+
+
+
+
+
+
+class Net_Moco(nn.Module):
+
+    def __init__(self, pretrained, progress, num_classes):
+        super(Net_Moco, self).__init__()
+        self.query_encoder = resnet18(pretrained=pretrained, progress=progress, num_classes=num_classes)
+        self.key_encoder = resnet18(pretrained=pretrained, progress=progress, num_classes=num_classes)
+        self.m = pytorchgo_args.get_args().moving_average
+
+        self.mse_loss = torch.nn.MSELoss(reduce='mean')
+
+        self.semantic_memory = pytorchgo_args.get_args().semantic_mem.cuda()
+        self.semantic_memory.require_grad = False
+        self.word_adaptor = SemanticAdaptor_Conv1d(
+            semantic_dim=self.semantic_memory.shape[-1]
+        )
+
+    @torch.no_grad()
+    def _momentum_update_key_encoder(self):
+        """
+        Momentum update of the key encoder
+        """
+        for param_q, param_k in zip(self.query_encoder.parameters(), self.key_encoder.parameters()):
+            param_k.data = param_k.data * self.m + param_q.data * (1. - self.m)
+
+    def forward(self, x):
+        temperature = 0.07
+
+        frame_rank_embed_query, video_cls_query = self.query_encoder(x)
+        if self.training:
+            with torch.no_grad():  # no gradient to keys
+                frame_rank_embed_key, video_cls_key = self.key_encoder(x)
+                self._momentum_update_key_encoder()  # update the key encoder
+
+            #enhanced_frame_rank_embed_query = self.fc(self.cls_nl(x_support=frame_rank_embed_query, query=frame_rank_embed_key))
+            #mse = self.mse_loss(frame_rank_embed_key.mean(-1), frame_rank_embed_query.mean(-1))
+            mse = self.mse_loss(video_cls_query, video_cls_key)
+
+            # self.word_adaptor
+            #word_logits = torch.ones([batch_size, self.num_classes]).cuda()
+            #for b in range(batch_size):
+            word_embed_pred = self.word_adaptor(frame_rank_embed_query)
+            video_word_embed = F.normalize(word_embed_pred.mean(-1), p=2, dim=-1)
+                # semantic_mem already normalized
+            _semantic_memory = self.semantic_memory.unsqueeze(0)
+            _video_word_embed = video_word_embed.unsqueeze(1)
+            delta = _semantic_memory -  _video_word_embed
+            word_logits =  -torch.norm(delta,p=2,dim=-1)/ temperature
+
+
+            return frame_rank_embed_query,video_cls_query, mse, word_logits
+        else:
+            return frame_rank_embed_query
+
 
 
 def resnet34(pretrained=False, progress=True, **kwargs):

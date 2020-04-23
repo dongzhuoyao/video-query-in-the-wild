@@ -171,7 +171,6 @@ class ResNet3D(nn.Module):
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes))
-
         return nn.Sequential(*layers)
 
     def forward(self, x, target, temperature, mv=0.9):
