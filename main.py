@@ -36,14 +36,21 @@ from dataloader_baseline import (
     ARV_Retrieval_Moment,
 )
 
-init_lr = 1e-3
-epochs = 40
-lr_decay_rate = 24
-eval_per_epoch = 4
+pretrained = True
+if pretrained:
+    init_lr = 1e-3
+    epochs = 40
+    lr_decay_rate = 24
+    eval_per_epoch = 4
+else:
+    init_lr = 1e-4
+    epochs = 16
+    lr_decay_rate = 10
+    eval_per_epoch = 2
+
 batch_size = 10
 test_batch_size = 10 * 3
 triplet_margin = 1
-pretrained = False
 eval_split = "testing"
 train_frame = 32
 dropout = 0.5
@@ -207,11 +214,11 @@ def get_model(args):
 
 
 
-    from misc_utils.model_utils import set_distributed_backend
-
-    model = set_distributed_backend(
-        model, args
-    )  # TODO, dongzhuoyao, why this sentence is so vital for speed up?
+    #from misc_utils.model_utils import set_distributed_backend
+    #model = set_distributed_backend(
+    #    model, args
+    #)  # TODO, dongzhuoyao, why this sentence is so vital for speed up?
+    model = model.cuda()
     return model
 
 
@@ -290,7 +297,7 @@ def train_ranking(loader, model, optimizer, epoch, args):
             input.shape[3],
             input.shape[4],
             input.shape[5],
-        )
+        ).cuda()
         metric_feat, cls_logits, reg_logits = model(
             input, target, temperature=0.1
         )
@@ -360,7 +367,7 @@ def train_vasa(loader, model, optimizer, epoch, args):
             input.shape[3],
             input.shape[4],
             input.shape[5],
-        )
+        ).cuda()
         metric_feat, cls_logit, consistency_loss, word_logit = model(input)
         ce_loss = ce_loss_criterion(cls_logit.cuda(), target.long().cuda())
         reg_loss = consistency_loss
@@ -430,7 +437,7 @@ def train_va(loader, model, optimizer, epoch, args):
             input.shape[3],
             input.shape[4],
             input.shape[5],
-        )
+        ).cuda()
         metric_feat, cls_logits, reg_logits = model(
             input, target, temperature=0.1, mv=args.moving_average
         )
@@ -500,7 +507,7 @@ def train_moco_va(loader, model, optimizer, epoch, args):
             input.shape[3],
             input.shape[4],
             input.shape[5],
-        )
+        ).cuda()
         metric_feat, cls_logits, consistency_mse_loss = model(input)
         ce_loss = ce_loss_criterion(cls_logits.cuda(), target.long().cuda())
         consistency_mse_loss = consistency_mse_loss.mean()#TODO, buggy
@@ -564,7 +571,7 @@ def train(loader, model, optimizer, epoch, args):
             input.shape[3],
             input.shape[4],
             input.shape[5],
-        )
+        ).cuda()
         metric_feat, output = model(input)
         ce_loss = ce_loss_criterion(output.cuda(), target.long().cuda())
         loss = ce_loss
