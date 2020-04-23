@@ -162,6 +162,8 @@ class ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
+        self.dropout = nn.Dropout(0.5)
+
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
@@ -205,6 +207,10 @@ class ResNet(nn.Module):
 
     def _forward_impl(self, x):
         # See note [TorchScript super()]
+        bs,t,w,h,c = x.shape
+        x = x.view(-1,w,h,c)
+        x = x.permute(0,3,1,2).contiguous()
+
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -215,12 +221,15 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        #TODO
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.fc(x)
-
-        return x
+        rank_embed = x.view(bs, t, 512, -1).mean(
+            dim=3
+        )  # B,T,C
+        rank_embed = rank_embed.permute(0,2,1).contiguous()# B,C,T
+        video_cls_logits = self.fc(self.dropout(rank_embed.mean(dim=-1)))  # torch.Size([8, 200, 15, 1, 1])
+        if self.training:
+            return rank_embed, video_cls_logits
+        else:
+            return rank_embed
 
     def forward(self, x):
         return self._forward_impl(x)
