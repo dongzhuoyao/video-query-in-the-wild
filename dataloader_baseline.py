@@ -663,8 +663,8 @@ class evaluation_metric:
         logger.info(
             "1-order class_specific_map={}".format(o1_class_specific_map * 100)
         )
-        logger.info(
-            "1-order class_agnostic_map={}".format(o1_class_agnostic_map * 100)
+        logger.warning(
+            "(report metric)class_agnostic_map={}".format(o1_class_agnostic_map * 100)
         )
 
         logger.warning(

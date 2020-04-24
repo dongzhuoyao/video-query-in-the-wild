@@ -167,7 +167,7 @@ def parse():
     if args.debug:
         args.epochs = 2
 
-    args.logger_dir = "train_log/resnet2222_{}_{}_novel{}_pretrain{}_mv{}".format(
+    args.logger_dir = "train_log/resnet2222_w_unseen_{}_{}_novel{}_pretrain{}_mv{}".format(
         os.path.basename(__file__).replace(".py", ""),
         args.method,
         args.novel_num,
