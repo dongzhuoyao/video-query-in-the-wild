@@ -39,14 +39,14 @@ from dataloader_baseline import (
 pretrained = True
 if not pretrained:
     init_lr = 1e-3
-    epochs = 40
-    lr_decay_rate = 24
-    eval_per_epoch = 4
+    epochs = 100
+    lr_decay_rate = 60
+    eval_per_epoch = 10
 else:
     init_lr = 1e-4
-    epochs = 16
-    lr_decay_rate = 10
-    eval_per_epoch = 2
+    epochs = 100
+    lr_decay_rate = 60
+    eval_per_epoch = 10
 
 batch_size = 10
 test_batch_size = 10 * 3
@@ -105,7 +105,7 @@ def parse():
     )
     parser.add_argument(
         "--print_freq",
-        default=50,
+        default=5,
         type=int,
         help="print frequency (default: 10)",
     )
