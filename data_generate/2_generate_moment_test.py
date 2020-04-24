@@ -2,13 +2,16 @@ import json
 import numpy as np
 
 input_json = "video_segment.json"
-output_json = "arv_db_100_20_80_untrimmed_v2.json"
-from activitynet_label_100_20_80 import (
+from activitynet_label_60_20_60_unseen60 import (
     activitynet_label_list,
     arv_val_label,
     arv_test_label,
-    arv_train_label,
+    arv_train_label,arv_unseen_label,
+json_name,
+moment_json_name
 )
+output_json = moment_json_name
+
 
 activitynet_data = json.load(open("./activity_net.v1-3.min.json"))
 
@@ -45,12 +48,14 @@ for video_id, annotations in activitynet_data["database"].items():
             activitynet_duration=duration,
             activitynet_subset=activitynet_subset,
         )
-        if label in arv_test_label:
+        if label in arv_test_label or label in arv_val_label:
             query_dict["retrieval_type"] = "novel"
         elif label in arv_train_label:
             query_dict["retrieval_type"] = "base"
-        else:
-            assert label in arv_val_label
+        elif label in arv_unseen_label:
+            query_dict["retrieval_type"] = "unseen"
+        else:raise
+            #assert label in arv_val_label
         query_list.append(query_dict)
 
 print(

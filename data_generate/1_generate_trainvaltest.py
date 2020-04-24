@@ -3,14 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 input_json = "video_segment.json"
-from activitynet_label_100_20_80 import (
+from activitynet_label_60_20_60_unseen60 import (
     activitynet_label_list,
     arv_val_label,
     arv_test_label,
     arv_train_label,
+arv_unseen_label,
+json_name
 )
 
-output_json = "arv_db_100_20_80.json"
+output_json = json_name
 
 minimal_sample_per_novel_class = 5
 DISTRACTOR_LABEL = "distractor_activity"
@@ -24,8 +26,10 @@ print("validation label number={}".format(len(arv_val_label)))
 print(", ".join(arv_val_label))
 print("testing label number={}".format(len(arv_test_label)))
 print(", ".join(arv_test_label))
+print("testing unseen label number={}".format(len(arv_unseen_label)))
+print(", ".join(arv_unseen_label))
 
-my_dict = dict(training=dict(), testing=dict())
+activitynet_train_and_test = dict(training=dict(), testing=dict())
 my_dict_final = dict(training=dict(), validation=dict(), testing=dict())
 
 
@@ -41,23 +45,20 @@ for d in data:
     if (
         d["activitynet_subset"] == "training"
     ):  # ActivityNet trainingset goes to train
-        my_dict["training"] = _add_item_to_dict(
-            _dict=my_dict["training"], label=d["label"], data=d
+        activitynet_train_and_test["training"] = _add_item_to_dict(
+            _dict=activitynet_train_and_test["training"], label=d["label"], data=d
         )
     elif (
         d["activitynet_subset"] == "validation"
     ):  # ActivityNet validationset goes to testing
-        my_dict["testing"] = _add_item_to_dict(
-            _dict=my_dict["testing"], label=d["label"], data=d
+        activitynet_train_and_test["testing"] = _add_item_to_dict(
+            _dict=activitynet_train_and_test["testing"], label=d["label"], data=d
         )
-    else:
-        raise
+    else:raise
 
-# generating validation data and clean up training data.
-new_training_list = []
 
 # split a small part of validation data from training set
-mydict_training = my_dict["training"]
+mydict_training = activitynet_train_and_test["training"]
 for label in arv_train_label:
     my_dict_final["training"][label] = mydict_training[label][
         validation_sample_per_class:
@@ -74,7 +75,8 @@ for label in [DISTRACTOR_LABEL]:
     my_dict_final["training"][label] = mydict_training[label][
         validation_sample_per_class * 20 :
     ]
-#################
+################# prepare validation subset
+
 for label in arv_train_label:
     my_dict_final["validation"][label] = mydict_training[label][
         :validation_sample_per_class
@@ -85,19 +87,36 @@ for label in arv_val_label:
         + validation_sample_per_class
     ]
 for label in arv_test_label:
-    pass  # validation set don't need test label
+    pass  # our validation set don't need test label
 for label in [DISTRACTOR_LABEL]:
     my_dict_final["validation"][label] = mydict_training[label][
         : validation_sample_per_class * 20
     ]
 
+############### prepare testing subset
+mydict_testing = activitynet_train_and_test["testing"]
+for label in arv_train_label:
+    my_dict_final["testing"][label] = mydict_testing[label]
+for label in arv_val_label:# we allow overlap with validation class this time, BMVC
+    my_dict_final["testing"][label] = mydict_testing[label]
+for label in arv_test_label:
+    my_dict_final["testing"][label] = mydict_testing[label]
+for label in arv_unseen_label:
+    my_dict_final["testing"][label] = mydict_testing[label]
+for label in [DISTRACTOR_LABEL]:
+    my_dict_final["testing"][label] = mydict_testing[label]
 
-my_dict = my_dict_final
+
+
+
+
+
+######## set is_query, retrieval_type attribute for all subsets(training, validation, testing)
 
 cur_split = "training"
-for cls_dict in my_dict[cur_split].keys():
+for cls_dict in my_dict_final[cur_split].keys():
     _new_listttt = []
-    for d in my_dict[cur_split][cls_dict]:
+    for d in my_dict_final[cur_split][cls_dict]:
         if d["label"] in arv_train_label:
             d["is_query"] = -1  # -1 means useless info
             d["retrieval_type"] = "base"
@@ -117,12 +136,12 @@ for cls_dict in my_dict[cur_split].keys():
         else:
             raise
         _new_listttt.append(d)
-    my_dict[cur_split][cls_dict] = _new_listttt
+    my_dict_final[cur_split][cls_dict] = _new_listttt
 
 cur_split = "validation"
-for cls_dict in my_dict[cur_split].keys():
+for cls_dict in my_dict_final[cur_split].keys():
     _new_listttt = []
-    for d in my_dict[cur_split][cls_dict]:
+    for d in my_dict_final[cur_split][cls_dict]:
         if d["label"] in arv_train_label:
             d["is_query"] = 1
             d["retrieval_type"] = "base"
@@ -140,12 +159,12 @@ for cls_dict in my_dict[cur_split].keys():
         else:
             raise
         _new_listttt.append(d)
-    my_dict[cur_split][cls_dict] = _new_listttt
+    my_dict_final[cur_split][cls_dict] = _new_listttt
 
 cur_split = "testing"
-for cls_dict in my_dict[cur_split].keys():
+for cls_dict in my_dict_final[cur_split].keys():
     _new_listttt = []
-    for d in my_dict[cur_split][cls_dict]:
+    for d in my_dict_final[cur_split][cls_dict]:
         if d["label"] in arv_train_label:
             d["is_query"] = 1
             d["retrieval_type"] = "base"
@@ -158,6 +177,10 @@ for cls_dict in my_dict[cur_split].keys():
             d["is_query"] = 1
             d["retrieval_type"] = "novel"
 
+        elif d["label"] in arv_unseen_label:
+            d["is_query"] = 1
+            d["retrieval_type"] = "unseen"
+
         elif d["label"] == DISTRACTOR_LABEL:
             d["is_query"] = 0
             d["retrieval_type"] = "noise"
@@ -165,17 +188,27 @@ for cls_dict in my_dict[cur_split].keys():
         else:
             raise
         _new_listttt.append(d)
-    my_dict[cur_split][cls_dict] = _new_listttt
+    my_dict_final[cur_split][cls_dict] = _new_listttt
 
 with open(output_json, "w") as f:
-    json.dump(my_dict, f)
+    json.dump(my_dict_final, f)
+
+
+exit(0)
+
+
+
+
+
+
+
 ####### statistics ##########
 avg_video_num_per_class_hist = []
 avg_fg_duration_hist = []
 avg_fgbg_ratio_hist = []
 
 for _subset in ["training", "validation", "testing"]:
-    _dataset_dict = my_dict[_subset]
+    _dataset_dict = my_dict_final[_subset]
     total_video_num = sum([len(_) for _ in list(_dataset_dict.values())])
 
     def _show_class_sample_num():

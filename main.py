@@ -28,7 +28,7 @@ import os
 debug_short_train_num = 1
 novel_num = 1
 input_size = 112
-nclass = 200
+nclass = 140
 
 from dataloader_baseline import (
     ARV_Retrieval,
@@ -37,7 +37,7 @@ from dataloader_baseline import (
 )
 
 pretrained = True
-if pretrained:
+if not pretrained:
     init_lr = 1e-3
     epochs = 40
     lr_decay_rate = 24
@@ -71,8 +71,8 @@ def parse():
     )
     parser.add_argument(
         "--meta_split",
-        default="100_20_80",
-        choices=["100_20_80", "120_20_60", "80_20_100"],
+        default="60_20_60_unseen60",
+        choices=["60_20_60_unseen60"],
         type=str,
     )
     parser.add_argument(
@@ -158,7 +158,6 @@ def parse():
     parser.add_argument("--eval_moment", action="store_true")
     parser.add_argument("--eval_clip", action="store_true")
     parser.add_argument("--eval_all", action="store_true")
-    parser.add_argument("--log_action", default="n", type=str)
     parser.add_argument("--moving_average", default=moving_average, type=int)
     args = parser.parse_args()
 
@@ -175,7 +174,7 @@ def parse():
         args.pretrained,
         args.moving_average,
     )
-    logger.set_logger_dir(args.logger_dir, args.log_action)
+    logger.set_logger_dir(args.logger_dir,'d')
     return args
 
 
@@ -226,6 +225,7 @@ def do_eval(args, model):
     model.eval()
 
     def feat_func(input):
+        input = input.cuda()
         if args.method == "baseline":
             metric_feat, _ = model(input)  # [B,C,T]
         elif args.method == "baseline2d":
@@ -244,29 +244,27 @@ def do_eval(args, model):
         return metric_feat.data.cpu().numpy()
 
     if args.eval_clip:
-        arv_retrieval = ARV_Retrieval_Clip(
+        score_dict = ARV_Retrieval_Clip(
             args=args, feat_extract_func=feat_func
-        )
-        score_dict = arv_retrieval.evaluation()
+        ).evaluation()
     elif args.eval_moment:
-        arv_retrieval = ARV_Retrieval_Moment(
+        score_dict = ARV_Retrieval_Moment(
             args=args, feat_extract_func=feat_func
-        )
-        score_dict = arv_retrieval.evaluation()
+        ).evaluation()
     elif args.eval_all:
-        arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
-        score_dict = arv_retrieval.evaluation()
-        arv_retrieval = ARV_Retrieval_Clip(
+        logger.warning("evaluate normal task")
+        score_dict = ARV_Retrieval(args=args, feat_extract_func=feat_func).evaluation()
+        logger.warning("evaluate clip task")
+        score_dict = ARV_Retrieval_Clip(
             args=args, feat_extract_func=feat_func
-        )
-        arv_retrieval.evaluation()
-        arv_retrieval = ARV_Retrieval_Moment(
+        ).evaluation()
+        logger.warning("evaluate moment task")
+        score_dict = ARV_Retrieval_Moment(
             args=args, feat_extract_func=feat_func
-        )
-        arv_retrieval.evaluation()
+        ).evaluation()
+
     else:  # only evaluate trimmed retrieval by default
-        arv_retrieval = ARV_Retrieval(args=args, feat_extract_func=feat_func)
-        score_dict = arv_retrieval.evaluation()
+        score_dict = ARV_Retrieval(args=args, feat_extract_func=feat_func).evaluation()
     model.train()
     return score_dict
 
@@ -683,13 +681,16 @@ def main():
                 )
 
     weigth_path = os.path.join(logger.get_logger_dir(), "best.pth.tar")
-    saved_dict = torch.load(weigth_path)
-    logger.warning(
-        "loading weight {}, best validation result={}".format(
-            weigth_path, saved_dict["score"]
+    try:
+        saved_dict = torch.load(weigth_path)
+        logger.warning(
+            "loading weight {}, best validation result={}".format(
+                weigth_path, saved_dict["score"]
+            )
         )
-    )
-    model.load_state_dict(saved_dict["state_dict"], strict=True)
+        model.load_state_dict(saved_dict["state_dict"], strict=True)
+    except:
+        logger.warning("weight file doesn't exist")
     args.eval_split = "testing"
     args.eval_all = True
     logger.info(vars(args))

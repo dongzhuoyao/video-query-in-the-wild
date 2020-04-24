@@ -157,12 +157,13 @@ class VRActivityNet(data.Dataset):
         from sklearn import preprocessing as sklearn_preprocessing
 
         for label_name in self.label2word_embed.keys():
-            id = self.cls2int[label_name]
-            tmp = sklearn_preprocessing.normalize(
-                np.array(self.label2word_embed[label_name]).reshape(1, -1)
-            )  # L2 Norm!!!!!!!!!!!
-            self.semantic_mem[id, :] = tmp
-            assert tmp.max() <= 1 and tmp.min() >= -1
+            if label_name in self.cls2int.keys():#we need to consider unseen class here, unseen class can not be used in training.
+                id = self.cls2int[label_name]
+                tmp = sklearn_preprocessing.normalize(
+                    np.array(self.label2word_embed[label_name]).reshape(1, -1)
+                )  # L2 Norm!!!!!!!!!!!
+                self.semantic_mem[id, :] = tmp
+                assert tmp.max() <= 1 and tmp.min() >= -1
         self.semantic_mem = torch.from_numpy(self.semantic_mem).float()
 
     def __getitem__(self, index):
@@ -329,6 +330,7 @@ class evaluation_metric:
         self.class_agnostic_ap = []
         self.base_classes = []
         self.novel_classes = []
+        self.unseen_classes = []
         self.r_at_n = [30, 50, 100]
         self.full_retrieval_top = {
             str(self.r_at_n[0]): list(),
@@ -341,6 +343,12 @@ class evaluation_metric:
             str(self.r_at_n[2]): list(),
         }
         self.novel_retrieval_top = {
+            str(self.r_at_n[0]): list(),
+            str(self.r_at_n[1]): list(),
+            str(self.r_at_n[2]): list(),
+        }
+
+        self.unseen_retrieval_top = {
             str(self.r_at_n[0]): list(),
             str(self.r_at_n[1]): list(),
             str(self.r_at_n[2]): list(),
@@ -365,21 +373,27 @@ class evaluation_metric:
             base_y_pred=list(),
             novel_y_true=list(),
             novel_y_pred=list(),
+            unseen_y_true=list(),
+            unseen_y_pred=list(),
         )
         self.set_class_info(query_list)
 
     def set_class_info(self, query_list):
         for q in query_list:
             q = q[0]
+            """
             assert (
                 q["label"]
                 in dataset_config[self.args.meta_split]["arv_train_label"]
                 + dataset_config[self.args.meta_split]["arv_test_label"]
             )  # only allow query video from train, test classes.
+            """
             if q["retrieval_type"] == "base":
                 self.base_classes.append(q["label"])
             elif q["retrieval_type"] == "novel":
                 self.novel_classes.append(q["label"])
+            elif q["retrieval_type"] == "unseen":
+                self.unseen_classes.append(q["label"])
             else:
                 raise
 
@@ -425,6 +439,8 @@ class evaluation_metric:
                 self.base_retrieval_top[str(_thres)].append(recall_list[_])
             elif retrieval_type == "novel":
                 self.novel_retrieval_top[str(_thres)].append(recall_list[_])
+            elif retrieval_type == "unseen":
+                self.unseen_retrieval_top[str(_thres)].append(recall_list[_])
             else:
                 raise
 
@@ -454,6 +470,9 @@ class evaluation_metric:
         elif retrieval_type == "novel":
             self.system_ap_dict["novel_y_true"].extend(y_true.tolist())
             self.system_ap_dict["novel_y_pred"].extend(y_scores.tolist())
+        elif retrieval_type == "unseen":
+            self.system_ap_dict["unseen_y_true"].extend(y_true.tolist())
+            self.system_ap_dict["unseen_y_pred"].extend(y_scores.tolist())
         else:
             raise
         # confusion matrix
@@ -492,6 +511,8 @@ class evaluation_metric:
                 self.base_retrieval_top[str(_thres)].append(cur_recall)
             elif retrieval_type == "novel":
                 self.novel_retrieval_top[str(_thres)].append(cur_recall)
+            elif retrieval_type == "unseen":
+                self.unseen_retrieval_top[str(_thres)].append(cur_recall)
             else:
                 raise
 
@@ -506,6 +527,11 @@ class evaluation_metric:
             self.novel_retrieval_top[str(_thres)] = Average(
                 self.novel_retrieval_top[str(_thres)]
             )
+
+            self.unseen_retrieval_top[str(_thres)] = Average(
+                self.unseen_retrieval_top[str(_thres)]
+            )
+
             logger.info(
                 "1-order R@{}={}".format(
                     str(_thres), self.full_retrieval_top[str(_thres)] * 100
@@ -519,6 +545,11 @@ class evaluation_metric:
             logger.info(
                 "1-order novel R@{}={}".format(
                     str(_thres), self.novel_retrieval_top[str(_thres)] * 100
+                )
+            )
+            logger.info(
+                "1-order unseen R@{}={}".format(
+                    str(_thres), self.unseen_retrieval_top[str(_thres)] * 100
                 )
             )
 
@@ -541,10 +572,16 @@ class evaluation_metric:
                     for _cls_name in self.novel_classes
                 ]
             )
+            unseen_recall = Average(
+                [
+                    self.avg2_full_retrieval_top[str(_thres)][_cls_name]
+                    for _cls_name in self.unseen_classes
+                ]
+            )
             avg_recall = Average(
                 [
                     self.avg2_full_retrieval_top[str(_thres)][_cls_name]
-                    for _cls_name in (self.novel_classes + self.base_classes)
+                    for _cls_name in (self.novel_classes + self.base_classes+ self.base_classes)
                 ]
             )
 
@@ -555,28 +592,36 @@ class evaluation_metric:
             logger.info(
                 "2-order novel R@{}={}".format(str(_thres), novel_recall * 100)
             )
+            logger.info(
+                "2-order unseen R@{}={}".format(str(_thres), unseen_recall * 100)
+            )
             logger.info("-" * 30)
 
         ################
         base_ap_list = []
         novel_ap_list = []
+        unseen_ap_list = []
         for _cls_name in self.base_classes:
             base_ap_list.extend(self.class_dict[_cls_name])
 
         for _cls_name in self.novel_classes:
             novel_ap_list.extend(self.class_dict[_cls_name])
+        for _cls_name in self.unseen_classes:
+            unseen_ap_list.extend(self.class_dict[_cls_name])
 
         for cls_name, ap_list in self.class_dict.items():
             self.class_dict[cls_name] = Average(ap_list)
 
         o1_class_agnostic_map = Average(self.class_agnostic_ap)
-        o1_class_specific_map = Average(base_ap_list + novel_ap_list)
+        o1_class_specific_map = Average(base_ap_list + novel_ap_list + unseen_ap_list)
         o1_class_specific_base_map = Average(base_ap_list)
         o1_class_specific_novel_map = Average(novel_ap_list)
+        o1_class_specific_unseen_map = Average(unseen_ap_list)
         o1_hmean = stats.hmean(
             [
                 o1_class_specific_base_map + 1e-10,
                 o1_class_specific_novel_map + 1e-10,
+                o1_class_specific_unseen_map + 1e-10,
             ]
         )
 
@@ -587,10 +632,14 @@ class evaluation_metric:
         o2_class_specific_novel_map = Average(
             [self.class_dict[_cls_name] for _cls_name in self.novel_classes]
         )
+        o2_class_specific_unseen_map = Average(
+            [self.class_dict[_cls_name] for _cls_name in self.unseen_classes]
+        )
         o2_hmean = stats.hmean(
             [
                 o2_class_specific_base_map + 1e-10,
                 o2_class_specific_novel_map + 1e-10,
+                o2_class_specific_unseen_map + 1e-10,
             ]
         )
 
@@ -604,6 +653,11 @@ class evaluation_metric:
         logger.info(
             "1-order class_specific_novel_map={}".format(
                 o1_class_specific_novel_map * 100
+            )
+        )
+        logger.info(
+            "1-order class_specific_unseen_map={}".format(
+                o1_class_specific_unseen_map * 100
             )
         )
         logger.info(
@@ -626,6 +680,11 @@ class evaluation_metric:
                 o2_class_specific_novel_map * 100
             )
         )
+        logger.warning(
+            "(report metric)2-order class_specific_unseen_map={}".format(
+                o2_class_specific_unseen_map * 100
+            )
+        )
         logger.info(
             "2-order class_specific_map={}".format(o2_class_specific_map * 100)
         )
@@ -640,6 +699,7 @@ class evaluation_metric:
             label=self.cm_labels,
             base_classes=self.base_classes,
             novel_classes=self.novel_classes,
+            unseen_classes=self.unseen_classes,
             query_duration_map_dict=self.query_duration_map_dict,
             system_ap_dict=self.system_ap_dict,
             class_map_dict=self.class_dict,
@@ -651,9 +711,11 @@ class evaluation_metric:
             ap=o2_hmean,
             base_map=o2_class_specific_base_map,
             novel_map=o2_class_specific_novel_map,
+            unseen_map=o2_class_specific_unseen_map,
             recall=self.full_retrieval_top,
             base_recall=self.base_retrieval_top,
             novel_recall=self.novel_retrieval_top,
+            unseen_recall=self.unseen_retrieval_top,
             cm_dict=cm_dict,
         )
 
@@ -670,7 +732,9 @@ class ARV_Retrieval_Clip:
         self.input_size = args.input_size
         self.possible_classes = (
             dataset_config[self.args.meta_split]["arv_train_label"]
+            + dataset_config[self.args.meta_split]["arv_val_label"]
             + dataset_config[self.args.meta_split]["arv_test_label"]
+            + dataset_config[self.args.meta_split]["arv_unseen_label"]
         )
         self.load_data()
         logger.warning("memory_leak_debug={}".format(args.memory_leak_debug))
@@ -706,6 +770,7 @@ class ARV_Retrieval_Clip:
             self.gallery_list = object_file["gallery_list"]
             logger.warning("load cache_feat from {}".format(cache_path))
         else:
+            #random.shuffle(self.query_list)  # easy for debugging
             cur_list = list()
             chunk_list = list(chunks(self.query_list, self.test_batch_size))
             for idxx, data_batch in tqdm(
@@ -973,8 +1038,10 @@ class ARV_Retrieval_Moment:
         self.test_frame_num = args.test_frame_num
         self.input_size = args.input_size
         self.possible_classes = (
-            dataset_config[self.args.meta_split]["arv_train_label"]
-            + dataset_config[self.args.meta_split]["arv_test_label"]
+                dataset_config[self.args.meta_split]["arv_train_label"]
+                + dataset_config[self.args.meta_split]["arv_val_label"]
+                + dataset_config[self.args.meta_split]["arv_test_label"]
+                + dataset_config[self.args.meta_split]["arv_unseen_label"]
         )
         self.feat_dim = args.metric_feat_dim
         self.load_data()
@@ -1012,6 +1079,7 @@ class ARV_Retrieval_Moment:
             logger.warning("load cache_feat from {}".format(cache_path))
         else:
             ### extract feature for query video #####
+            #random.shuffle(self.query_list)  # easy for debugging
             cur_list = list()
             chunk_list = list(chunks(self.query_list, self.test_batch_size))
             for idxx, data_batch in tqdm(
@@ -1399,8 +1467,10 @@ class ARV_Retrieval:
             )
         elif self.eval_split == "testing":
             self.possible_classes = (
-                dataset_config[self.args.meta_split]["arv_train_label"]
-                + dataset_config[self.args.meta_split]["arv_test_label"]
+                    dataset_config[self.args.meta_split]["arv_train_label"]
+                    + dataset_config[self.args.meta_split]["arv_val_label"]
+                    + dataset_config[self.args.meta_split]["arv_test_label"]
+                    + dataset_config[self.args.meta_split]["arv_unseen_label"]
             )
         else:
             logger.warning("evaluation on training set!")
@@ -1455,6 +1525,7 @@ class ARV_Retrieval:
             self.gallery_list = object_file["gallery_list"]
             logger.warning("load cache_feat from {}".format(cache_path))
         else:
+            #random.shuffle(self.data_list[self.eval_split])#easy for debugging
             cur_list = list()
             chunk_list = list(
                 chunks(self.data_list[self.eval_split], self.test_batch_size)
@@ -1517,8 +1588,8 @@ class ARV_Retrieval:
         )
 
         self.original_query_list = self.query_list
+        self.query_list = [q for q in self.query_list if q["is_query"] == 1]
         self.query_list = generate_multi_query(self.query_list)
-        self.query_list = [q for q in self.query_list if q[0]["is_query"] == 1]
         self.class_map_evaluation = evaluation_metric(
             self.args, self.query_list
         )

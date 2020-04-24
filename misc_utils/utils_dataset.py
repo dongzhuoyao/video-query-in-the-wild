@@ -11,30 +11,15 @@ activtynet_fps3_path = "data/activitynet1.3_train_val_frames_fps3"
 
 
 dataset_config = {
-    "100_20_80": dict(
-        arv_train_label=data_generate.activitynet_label_100_20_80.arv_train_label,
-        arv_test_label=data_generate.activitynet_label_100_20_80.arv_test_label,
-        arv_val_label=data_generate.activitynet_label_100_20_80.arv_val_label,
-        activitynet_label_list=data_generate.activitynet_label_100_20_80.activitynet_label_list,
-        json_path=data_generate.activitynet_label_100_20_80.json_path,
-        moment_eval_json_path=data_generate.activitynet_label_100_20_80.moment_eval_json_path,
-    ),
-    "120_20_60": dict(
-        arv_train_label=data_generate.activitynet_label_120_20_60.arv_train_label,
-        arv_test_label=data_generate.activitynet_label_120_20_60.arv_test_label,
-        arv_val_label=data_generate.activitynet_label_120_20_60.arv_val_label,
-        activitynet_label_list=data_generate.activitynet_label_120_20_60.activitynet_label_list,
-        json_path=data_generate.activitynet_label_120_20_60.json_path,
-        moment_eval_json_path=data_generate.activitynet_label_120_20_60.moment_eval_json_path,
-    ),
-    "80_20_100": dict(
-        arv_train_label=data_generate.activitynet_label_80_20_100.arv_train_label,
-        arv_test_label=data_generate.activitynet_label_80_20_100.arv_test_label,
-        arv_val_label=data_generate.activitynet_label_80_20_100.arv_val_label,
-        activitynet_label_list=data_generate.activitynet_label_80_20_100.activitynet_label_list,
-        json_path=data_generate.activitynet_label_80_20_100.json_path,
-        moment_eval_json_path=data_generate.activitynet_label_80_20_100.moment_eval_json_path,
-    ),
+    "60_20_60_unseen60": dict(
+        arv_train_label=data_generate.activitynet_label_60_20_60_unseen60.arv_train_label,
+        arv_test_label=data_generate.activitynet_label_60_20_60_unseen60.arv_test_label,
+        arv_val_label=data_generate.activitynet_label_60_20_60_unseen60.arv_val_label,
+        arv_unseen_label=data_generate.activitynet_label_60_20_60_unseen60.arv_unseen_label,
+        activitynet_label_list=data_generate.activitynet_label_60_20_60_unseen60.activitynet_label_list,
+        json_path=data_generate.activitynet_label_60_20_60_unseen60.json_path,
+        moment_eval_json_path=data_generate.activitynet_label_60_20_60_unseen60.moment_eval_json_path,
+    )
 }
 
 
