@@ -28,7 +28,6 @@ import os
 debug_short_train_num = 1
 novel_num = 1
 input_size = 112
-nclass = 170
 
 from dataloader_baseline import (
     ARV_Retrieval,
@@ -37,16 +36,18 @@ from dataloader_baseline import (
 )
 
 pretrained = True
+
+init_lr = 1e-4
+epochs = 20
+lr_decay_rate = 14
+eval_per_epoch = 2
+
 if not pretrained:
     init_lr = 1e-3
     epochs = 100
     lr_decay_rate = 60
     eval_per_epoch = 10
-else:
-    init_lr = 1e-4
-    epochs = 100
-    lr_decay_rate = 60
-    eval_per_epoch = 10
+
 
 batch_size = 10
 test_batch_size = 10 * 3
@@ -66,13 +67,13 @@ def parse():
     parser.add_argument(
         "--method",
         default="baseline2d",
-        choices=["baseline","baseline2d", "va","moco_va", "moco_vasa"],
+        choices=["baseline2d", "va","moco_va", "moco_vasa","moco_vasaaa"],
         type=str,
     )
     parser.add_argument(
         "--meta_split",
         default="120_20_30_unseen30",
-        choices=["60_20_60_unseen60", "120_20_30_unseen30"],
+        choices=["60_20_60_unseen60", "120_20_30_unseen30", "150_10_20_unseen20"],
         type=str,
     )
     parser.add_argument(
@@ -89,7 +90,7 @@ def parse():
     parser.add_argument(
         "--pretrained", default=pretrained, help="use pre-trained model"
     )
-    parser.add_argument("--nclass", default=nclass, type=int)
+    parser.add_argument("--nclass", default=-1, type=int)
     parser.add_argument(
         "--semantic_json",
         default="word_embed/wordembed_elmo_d1024.json",
@@ -167,12 +168,23 @@ def parse():
     if args.debug:
         args.epochs = 2
 
-    args.logger_dir = "train_log/resnet2222_w_unseen_{}_{}_novel{}_pretrain{}_mv{}".format(
-        os.path.basename(__file__).replace(".py", ""),
-        args.method,
-        args.novel_num,
-        args.pretrained,
-        args.moving_average,
+    if args.meta_split == "150_10_20_unseen20":
+        args.nclass = 180
+    elif  args.meta_split == "120_20_30_unseen30":
+        args.nclass = 170
+    elif  args.meta_split == "60_20_60_unseen60":
+        args.nclass = 140
+    else:raise
+
+    if args.method == "moco_vasaaa":
+        args.metric_feat_dim = 512 + 1024#TODO,10204 to dimension depends on json
+
+    args.logger_dir = "train_log/resnet2222_pretrain{pretrained}_{meta_split}_{method}_novel{novel_num}_mv{mv}".format(
+        method=args.method,
+        novel_num=args.novel_num,
+        pretrained=int(args.pretrained),
+        mv=args.moving_average,
+        meta_split=args.meta_split
     )
     logger.set_logger_dir(args.logger_dir,'d')
     return args
@@ -208,6 +220,9 @@ def get_model(args):
     elif args.method == "moco_vasa":
         from models.resnet18_2d_moco_va_sa import Net_Moco
         model = Net_Moco(pretrained=args.pretrained, progress=True, num_classes=args.nclass)
+    elif args.method == "moco_vasaaa":
+        from models.resnet18_2d_moco_va_saaa import Net_Moco
+        model = Net_Moco(pretrained=args.pretrained, progress=True, num_classes=args.nclass)
     else:
         raise
 
@@ -226,18 +241,14 @@ def do_eval(args, model):
 
     def feat_func(input):
         input = input.cuda()
-        if args.method == "baseline":
-            metric_feat, _ = model(input)  # [B,C,T]
-        elif args.method == "baseline2d":
+        if args.method == "baseline2d":
             metric_feat, _ = model(input)  # [B,C,T]
         elif args.method == "moco_va":
             metric_feat = model(input)  # [B,C,T]
         elif args.method == "moco_vasa":
             metric_feat = model(input)  # [B,C,T]
-        elif args.method == "va":
-            metric_feat, _ = model(input, None, None)  # [B,C,T]
-        elif args.method == "vasa":
-            metric_feat, _ = model(input, None, None, None)  # [B,C,T]
+        elif args.method == "moco_vasaaa":
+            metric_feat = model(input)  # [B,C,T]
         else:raise
 
         metric_feat = F.normalize(metric_feat, p=2, dim=1)  # normalize on C
@@ -647,18 +658,15 @@ def main():
     logger.info(vars(args))
 
     for epoch in range(args.epochs):
-        if args.method == "baseline":
-            train(train_loader, model, optimizer, epoch, args)
-        elif args.method == "baseline2d":
+
+        if args.method == "baseline2d":
             train(train_loader, model, optimizer, epoch, args)
         elif args.method == "moco_va":
             train_moco_va(train_loader, model, optimizer, epoch, args)
         elif args.method == "moco_vasa":
             train_vasa(train_loader, model, optimizer, epoch, args)
-        elif args.method == "vasa":
+        elif args.method == "moco_vasaaa":
             train_vasa(train_loader, model, optimizer, epoch, args)
-        elif args.method == "ranking":
-            train_ranking(train_loader, model, optimizer, epoch, args)
         else:
             raise
         if (epoch % eval_per_epoch == 0 and epoch>0) or epoch == args.epochs - 1:

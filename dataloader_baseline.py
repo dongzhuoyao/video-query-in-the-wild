@@ -1020,7 +1020,7 @@ class ARV_Retrieval_Clip:
         return self.class_map_evaluation.get_result()
 
     def evaluation(self):
-        if "evaluate" in self.args and self.args.evaluate:
+        if True:#"evaluate" in self.args and self.args.evaluate:
             self.extract_item_feature()
             d = self.ranking()
             return d
@@ -1439,7 +1439,7 @@ class ARV_Retrieval_Moment:
         return score_dict
 
     def evaluation(self):
-        if "evaluate" in self.args and self.args.evaluate:
+        if True:#"evaluate" in self.args and self.args.evaluate:
             self.extract_item_feature()
             d = self.ranking()
             return d

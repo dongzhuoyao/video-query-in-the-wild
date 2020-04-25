@@ -325,27 +325,28 @@ class Net_Moco(nn.Module):
         temperature = 0.07
 
         frame_rank_embed_query, video_cls_query = self.query_encoder(x)
+
+        with torch.no_grad():  # no gradient to keys
+            frame_rank_embed_key, video_cls_key = self.key_encoder(x)
+            self._momentum_update_key_encoder()  # update the key encoder
+
+        #enhanced_frame_rank_embed_query = self.fc(self.cls_nl(x_support=frame_rank_embed_query, query=frame_rank_embed_key))
+        #mse = self.mse_loss(frame_rank_embed_key.mean(-1), frame_rank_embed_query.mean(-1))
+        mse = self.mse_loss(video_cls_query, video_cls_key)
+
+        # self.word_adaptor
+        #word_logits = torch.ones([batch_size, self.num_classes]).cuda()
+        #for b in range(batch_size):
+        word_embed_pred = self.word_adaptor(frame_rank_embed_query)
+        video_word_embed = F.normalize(word_embed_pred.mean(-1), p=2, dim=-1)
+            # semantic_mem already normalized
+        _semantic_memory = self.semantic_memory.unsqueeze(0)
+        _video_word_embed = video_word_embed.unsqueeze(1)
+        delta = _semantic_memory -  _video_word_embed
+        word_logits =  -torch.norm(delta,p=2,dim=-1)/ temperature
+
+        #vis_and_semantic = torch.cat([frame_rank_embed_query,word_embed_pred],1)
         if self.training:
-            with torch.no_grad():  # no gradient to keys
-                frame_rank_embed_key, video_cls_key = self.key_encoder(x)
-                self._momentum_update_key_encoder()  # update the key encoder
-
-            #enhanced_frame_rank_embed_query = self.fc(self.cls_nl(x_support=frame_rank_embed_query, query=frame_rank_embed_key))
-            #mse = self.mse_loss(frame_rank_embed_key.mean(-1), frame_rank_embed_query.mean(-1))
-            mse = self.mse_loss(video_cls_query, video_cls_key)
-
-            # self.word_adaptor
-            #word_logits = torch.ones([batch_size, self.num_classes]).cuda()
-            #for b in range(batch_size):
-            word_embed_pred = self.word_adaptor(frame_rank_embed_query)
-            video_word_embed = F.normalize(word_embed_pred.mean(-1), p=2, dim=-1)
-                # semantic_mem already normalized
-            _semantic_memory = self.semantic_memory.unsqueeze(0)
-            _video_word_embed = video_word_embed.unsqueeze(1)
-            delta = _semantic_memory -  _video_word_embed
-            word_logits =  -torch.norm(delta,p=2,dim=-1)/ temperature
-
-
             return frame_rank_embed_query,video_cls_query, mse, word_logits
         else:
             return frame_rank_embed_query
