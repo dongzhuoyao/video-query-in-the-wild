@@ -19,6 +19,15 @@ dataset_config = {
         activitynet_label_list=data_generate.activitynet_label_60_20_60_unseen60.activitynet_label_list,
         json_path=data_generate.activitynet_label_60_20_60_unseen60.json_path,
         moment_eval_json_path=data_generate.activitynet_label_60_20_60_unseen60.moment_eval_json_path,
+    ),
+        "120_20_30_unseen30": dict(
+        arv_train_label=data_generate.activitynet_label_120_20_30_unseen30.arv_train_label,
+        arv_test_label=data_generate.activitynet_label_120_20_30_unseen30.arv_test_label,
+        arv_val_label=data_generate.activitynet_label_120_20_30_unseen30.arv_val_label,
+        arv_unseen_label=data_generate.activitynet_label_120_20_30_unseen30.arv_unseen_label,
+        activitynet_label_list=data_generate.activitynet_label_120_20_30_unseen30.activitynet_label_list,
+        json_path=data_generate. activitynet_label_120_20_30_unseen30.json_path,
+        moment_eval_json_path=data_generate.activitynet_label_120_20_30_unseen30.moment_eval_json_path,
     )
 }
 

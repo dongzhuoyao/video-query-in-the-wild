@@ -28,7 +28,7 @@ import os
 debug_short_train_num = 1
 novel_num = 1
 input_size = 112
-nclass = 140
+nclass = 170
 
 from dataloader_baseline import (
     ARV_Retrieval,
@@ -71,8 +71,8 @@ def parse():
     )
     parser.add_argument(
         "--meta_split",
-        default="60_20_60_unseen60",
-        choices=["60_20_60_unseen60"],
+        default="120_20_30_unseen30",
+        choices=["60_20_60_unseen60", "120_20_30_unseen30"],
         type=str,
     )
     parser.add_argument(

@@ -2,7 +2,7 @@ import json
 import numpy as np
 
 input_json = "video_segment.json"
-from activitynet_label_60_20_60_unseen60 import (
+from activitynet_label_120_20_30_unseen30 import (
     activitynet_label_list,
     arv_val_label,
     arv_test_label,
