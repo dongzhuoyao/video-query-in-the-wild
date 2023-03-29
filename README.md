@@ -1,18 +1,7 @@
 ## Video query by Activity video in the Wild
 
 
-## TODO
 
-
-- extract frame-level feature for trimmed, untrimmed video, setup a sub-dataset.
-- NMS in Moment Retrieval
-- try memory ratio 0.999
-- consider more baseline in https://arxiv.org/pdf/1912.04486.pdf
-- Flexible dataloader for ranking baseline
-- should remove background noise for activity.
-- close dataset hacking flag
-- Exhaustive search combination result in moment retrieval should be updated in paper.
-- remove absolute path of tao
 
 ## Install
 
